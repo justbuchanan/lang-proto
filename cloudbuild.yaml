@@ -1,0 +1,3 @@
+---
+- steps: 'gcr.io/cloud-builders/bazel'
+  args: ['version']
