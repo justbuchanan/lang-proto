@@ -2,3 +2,5 @@
 steps:
   - name: 'gcr.io/cloud-builders/bazel'
     args: ['version']
+  - name: 'gcr.io/cloud-builders/bazel'
+    args: ['test', '//...']
