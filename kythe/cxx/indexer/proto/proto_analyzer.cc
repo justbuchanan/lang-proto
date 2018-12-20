@@ -67,8 +67,7 @@ bool ProtoAnalyzer::AnalyzeFile(const std::string& rel_path,
 
   // Note: It would appear to be cleaner to have these calls within
   // FileDescriptorWalker.  However, for files which fail to have a valid
-  // FileDescriptor (which actually happens just processing the files in
-  // devtools/grok/proto/, it turns out), we at least get the partial info
+  // FileDescriptor , we at least get the partial info
   // of having the file in our index and acknowledging the lexer results.
   builder.AddNode(v_name, NodeKindID::kFile);
 
