@@ -4,37 +4,42 @@
 #include <iostream>
 #include <memory>
 
-#include "kythe/cxx/indexer/proto/indexer_frontend.h"
-#include "google/protobuf/io/coded_stream.h"
-#include "google/protobuf/io/printer.h"
+#include "absl/container/node_hash_map.h"
+#include "absl/strings/str_cat.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/descriptor_database.h"
 #include "google/protobuf/dynamic_message.h"
+#include "google/protobuf/io/coded_stream.h"
+#include "google/protobuf/io/printer.h"
 #include "google/protobuf/text_format.h"
-#include "absl/container/node_hash_map.h"
-#include "absl/strings/str_cat.h"
 #include "kythe/cxx/common/indexing/KytheCachingOutput.h"
 #include "kythe/cxx/common/indexing/KytheGraphRecorder.h"
 #include "kythe/cxx/common/protobuf_metadata_file.h"
+#include "kythe/cxx/indexer/proto/indexer_frontend.h"
+#include "kythe/cxx/indexer/proto/source_tree.h"
 #include "kythe/proto/analysis.pb.h"
 
 namespace kythe {
 namespace lang_textproto {
 
+using google::protobuf::FieldDescriptor;
 using kythe::proto::VName;
-using proto2::FieldDescriptor;
 
 namespace {
 // Pretty-prints a VName.
-string StringifyNode(const VName& v_name) {
+std::string StringifyNode(const VName& v_name) {
   return absl::StrCat(v_name.path(), ":", v_name.signature());
 }
 
 // Pretty-prints a NodeKindID.
-string StringifyKind(NodeKindID kind) { return string(spelling_of(kind)); }
+std::string StringifyKind(NodeKindID kind) {
+  return std::string(spelling_of(kind));
+}
 
 // Pretty-prints an EdgeKindID.
-string StringifyKind(EdgeKindID kind) { return string(spelling_of(kind)); }
+std::string StringifyKind(EdgeKindID kind) {
+  return std::string(spelling_of(kind));
+}
 }  // anonymous namespace
 
 VName VNameFromFullPath(const std::string& path) {
@@ -48,10 +53,10 @@ VName VNameFromFullPath(const std::string& path) {
   return VName();
 }
 
-VName VNameFromRelPath(const string& simplified_path) {
+VName VNameFromRelPath(const std::string& simplified_path) {
   // string full_path = FindWithDefault(*path_substitution_cache_,
   //                                         simplified_path, simplified_path);
-  string full_path = simplified_path;
+  std::string full_path = simplified_path;
   return VNameFromFullPath(full_path);
 }
 
@@ -62,24 +67,24 @@ VName VNameFromRelPath(const string& simplified_path) {
 template <typename SomeDescriptor>
 VName VNameForDescriptor(const SomeDescriptor* descriptor) {
   VName vname;
-  class PathSink : public ::proto2::io::AnnotationCollector {
+  class PathSink : public ::google::protobuf::io::AnnotationCollector {
    public:
-    PathSink(const std::function<VName(const string&)>& vname_for_rel_path,
+    PathSink(const std::function<VName(const std::string&)>& vname_for_rel_path,
              VName* vname)
         : vname_for_rel_path_(vname_for_rel_path), vname_(vname) {}
 
     void AddAnnotation(size_t begin_offset, size_t end_offset,
-                       const string& file_path,
+                       const std::string& file_path,
                        const std::vector<int>& path) override {
       *vname_ = VNameForProtoPath(vname_for_rel_path_(file_path), path);
     }
 
    private:
-    const std::function<VName(const string&)>& vname_for_rel_path_;
+    const std::function<VName(const std::string&)>& vname_for_rel_path_;
     VName* vname_;
   };
   // VName vname_for_rel_path;
-  const auto& vname_for_rel_path = [](const string& p) {
+  const auto& vname_for_rel_path = [](const std::string& p) {
     // return VNameForProtoPath(file_vname, )
     // TODO
     VName v;
@@ -90,9 +95,9 @@ VName VNameForDescriptor(const SomeDescriptor* descriptor) {
   // we have to go through some contortions. On the plus side, this is the
   // *exact* same code that protoc backends use for writing out annotations,
   // so if AddAnnotation ever changes we'll know.
-  string s;
-  ::proto2::io::StringOutputStream stream(&s);
-  ::proto2::io::Printer printer(&stream, '$', &path_sink);
+  std::string s;
+  ::google::protobuf::io::StringOutputStream stream(&s);
+  ::google::protobuf::io::Printer printer(&stream, '$', &path_sink);
   printer.Print("$0$", "0", "0");
   printer.Annotate("0", descriptor);
   return vname;
@@ -106,7 +111,7 @@ void TextProtoAnalyzer::AddNode(const VName& node_name, NodeKindID node_kind) {
 
 VName TextProtoAnalyzer::CreateAndAddAnchorNode(
     const VName& file, const FieldDescriptor* field,
-    proto2::TextFormat::ParseLocation loc) {
+    google::protobuf::TextFormat::ParseLocation loc) {
   VName anchor = file;
   anchor.set_language(kLanguageName);
 
@@ -133,13 +138,19 @@ void TextProtoAnalyzer::DoIt() {
   CHECK(files_->size() > 2)
       << "Must provide at least 2 files: a textproto and 1+ .proto files";
 
-  string pbtxt_name = compilation_unit_->source_file(1);
+  std::string pbtxt_name = compilation_unit_->source_file(1);
 
-  std::vector<std::pair<string, string>> path_substitutions;
-  absl::node_hash_map<string, string> file_substitution_cache;
+  std::vector<std::pair<std::string, std::string>> path_substitutions;
+  absl::node_hash_map<std::string, std::string> file_substitution_cache;
   // ParsePathSubstitutions(unit, &path_substitutions);
-  ProtoFileReader file_reader(&path_substitutions, &file_substitution_cache);
-  proto2::util::ProtoFileParser proto_parser(&file_reader);
+  // ProtoFileReader file_reader(&path_substitutions, &file_substitution_cache);
+  // google::protobuf::util::ProtoFileParser proto_parser(&file_reader);
+
+  PreloadedProtoFileTree file_reader(&path_substitutions,
+                                     &file_substitution_cache);
+  google::protobuf::compiler::SourceTreeDescriptorDatabase descriptor_db(
+      &file_reader);
+
   const proto::FileData* pbtxt_file_data = nullptr;
   for (const auto& file_data : *files_) {
     // the textproto file is in the list, but we skip over it because it doesn't
@@ -153,40 +164,42 @@ void TextProtoAnalyzer::DoIt() {
   }
   CHECK(pbtxt_file_data != nullptr)
       << "Couldn't find textproto source in file data";
-  proto2::DescriptorPool preloaded_pool(&proto_parser);
+  google::protobuf::DescriptorPool preloaded_pool(&descriptor_db);
 
-  const proto2::DescriptorPool* descriptor_pool = &preloaded_pool;
-  // proto2::DescriptorPool::generated_pool();
+  const google::protobuf::DescriptorPool* descriptor_pool = &preloaded_pool;
+  // google::protobuf::DescriptorPool::generated_pool();
 
-  proto2::TextFormat::Parser parser;
+  google::protobuf::TextFormat::Parser parser;
   // relax parser restrictions - even if the proto is partially ill-defined,
   // we'd like to analyze the parts that are good.
   parser.AllowPartialMessage(true);
   parser.AllowUnknownExtension(true);
 
   // record symbol locations
-  proto2::TextFormat::ParseInfoTree infoTree;
+  google::protobuf::TextFormat::ParseInfoTree infoTree;
   parser.WriteLocationsTo(&infoTree);
 
-  const proto2::Descriptor* msgType =
+  const google::protobuf::Descriptor* msgType =
       descriptor_pool->FindMessageTypeByName(msg_type_name_);
   CHECK(msgType != nullptr);
   LOG(INFO) << "descriptor: " << msgType->DebugString();
 
   // kythe::proto::CompilationUnit proto;
 
-  proto2::DynamicMessageFactory msg_factory;
-  std::unique_ptr<proto2::Message> proto(msg_factory.GetPrototype(msgType)->New());
+  google::protobuf::DynamicMessageFactory msg_factory;
+  std::unique_ptr<google::protobuf::Message> proto(
+      msg_factory.GetPrototype(msgType)->New());
   if (!parser.ParseFromString(pbtxt_file_data->content(), proto.get())) {
     LOG(FATAL) << "Failed to parse text proto";
   }
   LOG(INFO) << "parsed: \n" << proto->DebugString();
 
-  const proto2::Reflection* reflection = proto->GetReflection();
+  const google::protobuf::Reflection* reflection = proto->GetReflection();
 
   std::vector<const FieldDescriptor*> fieldsThatAreSet;
   // access to fields/extensions unknown to the parser.
-  // TODO: don't use ListFields() - it won't work with proto3 since protos don't have HasBits()
+  // TODO: don't use ListFields() - it won't work with proto3 since protos don't
+  // have HasBits()
   reflection->ListFields(*proto, &fieldsThatAreSet);
 
   for (auto& field : fieldsThatAreSet) {
@@ -199,7 +212,7 @@ void TextProtoAnalyzer::DoIt() {
     // TODO: handle comments?
 
     if (!field->is_repeated()) {
-      proto2::TextFormat::ParseLocation loc =
+      google::protobuf::TextFormat::ParseLocation loc =
           infoTree.GetLocation(field, -1 /* non-repeated */);
       if (loc.line == -1) {
         LOG(ERROR) << "  Not found";
@@ -214,7 +227,8 @@ void TextProtoAnalyzer::DoIt() {
 
       for (int i = 0; i < count; i++) {
         LOG(INFO) << "  index " << i;
-        proto2::TextFormat::ParseLocation loc = infoTree.GetLocation(field, i);
+        google::protobuf::TextFormat::ParseLocation loc =
+            infoTree.GetLocation(field, i);
         CHECK(loc.line != -1) << "  Not found this should never happen";
         LOG(INFO) << "  line " << loc.line << ", col: " << loc.column;
         CreateAndAddAnchorNode(file_vname, field, loc);

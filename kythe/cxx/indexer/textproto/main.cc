@@ -1,14 +1,14 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
-#include "kythe/cxx/indexer/textproto/analyzer.h"
+#include "google/protobuf/descriptor.h"
 #include "google/protobuf/io/coded_stream.h"
 #include "google/protobuf/io/printer.h"
-#include "google/protobuf/descriptor.h"
 #include "google/protobuf/text_format.h"
 #include "kythe/cxx/common/indexing/KytheCachingOutput.h"
 #include "kythe/cxx/common/indexing/KytheGraphRecorder.h"
 #include "kythe/cxx/common/protobuf_metadata_file.h"
+#include "kythe/cxx/indexer/textproto/analyzer.h"
 #include "kythe/proto/analysis.pb.h"
 
 DEFINE_string(o, "-", "Output filename.");
@@ -18,7 +18,9 @@ DEFINE_string(message_name, "",
               "Qualified message name of the proto. For example: "
               "\"kythe.proto.CompilationUnit\".");
 DEFINE_string(text_proto_file, "", "Input textproto file");
-DEFINE_string(proto_descriptor_list_file, "Text file with a path/to/file.proto on each line that lists the deps of the input textproto.");
+// DEFINE_string(proto_descriptor_list_file, "", "Text file with a
+// path/to/file.proto on each line that lists the deps of the input
+// textproto.");
 
 namespace {
 //
@@ -29,9 +31,9 @@ namespace {
 // }
 //
 
-string ReadTextFile(const string& path) {
+std::string ReadTextFile(const std::string& path) {
   std::ifstream in_stream(path);
-  string buf;
+  std::string buf;
 
   // allocate space up-front
   in_stream.seekg(0, std::ios::end);
@@ -47,17 +49,21 @@ string ReadTextFile(const string& path) {
 };  // namespace
 
 int main(int argc, char* argv[]) {
-  InitGoogle(R"(Command-line frontend for the Kythe TextProto indexer.
+  google::InitGoogleLogging(argv[0]);
+  gflags::SetUsageMessage(
+      R"(Command-line frontend for the Kythe TextProto indexer.
 
 Examples:
   indexer -o foo.bin -- --file foo.textproto --message_name "my.namespace.MyMessage"
-  indexer foo.textproto bar.textproto | verifier foo.textproto bar.textproto")",
-             &argc, &argv, true);
+  indexer foo.textproto bar.textproto | verifier foo.textproto bar.textproto")");
+
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  std::vector<std::string> final_args(argv + 1, argv + argc);
 
   CHECK(FLAGS_message_name.size() > 0) << "Please provide a --message_name";
   CHECK(FLAGS_text_proto_file.size()) << "Please provide an input --file";
 
-  const string input = ReadTextFile(FLAGS_text_proto_file);
+  const std::string input = ReadTextFile(FLAGS_text_proto_file);
 
   int write_fd = STDOUT_FILENO;
   if (FLAGS_o != "-") {
@@ -73,7 +79,7 @@ Examples:
   std::vector<kythe::proto::FileData> files;
 
   {
-    proto2::io::FileOutputStream raw_output(write_fd);
+    google::protobuf::io::FileOutputStream raw_output(write_fd);
     kythe::FileOutputStream kythe_output(&raw_output);
     kythe_output.set_flush_after_each_entry(FLAGS_flush_after_each_entry);
 
