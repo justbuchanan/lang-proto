@@ -135,7 +135,7 @@ void TextProtoAnalyzer::DoIt() {
   CHECK(compilation_unit_->source_file().size() == 1)
       << "Expected CU to contain 1 source file";
 
-  CHECK(files_->size() > 2)
+  CHECK(files_->size() >= 2)
       << "Must provide at least 2 files: a textproto and 1+ .proto files";
 
   std::string pbtxt_name = compilation_unit_->source_file(1);

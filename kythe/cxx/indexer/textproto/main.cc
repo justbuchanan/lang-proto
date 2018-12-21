@@ -3,6 +3,7 @@
 #include <iostream>
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/io/coded_stream.h"
+#include "absl/strings/match.h"
 #include "google/protobuf/io/printer.h"
 #include "google/protobuf/text_format.h"
 #include "kythe/cxx/common/indexing/KytheCachingOutput.h"
@@ -61,7 +62,7 @@ Examples:
   std::vector<std::string> final_args(argv + 1, argv + argc);
 
   CHECK(FLAGS_message_name.size() > 0) << "Please provide a --message_name";
-  CHECK(FLAGS_text_proto_file.size()) << "Please provide an input --file";
+  CHECK(FLAGS_text_proto_file.size()) << "Please provide an input --text_proto_file";
 
   const std::string input = ReadTextFile(FLAGS_text_proto_file);
 
@@ -77,6 +78,36 @@ Examples:
 
   kythe::proto::CompilationUnit cu;
   std::vector<kythe::proto::FileData> files;
+
+  kythe::proto::FileData pbtxtFile;
+  pbtxtFile.set_content(input);
+  pbtxtFile.mutable_info()->set_path(FLAGS_text_proto_file);
+  // TODO: digest?
+  files.push_back(std::move(pbtxtFile));
+
+  LOG(ERROR) << "hello!";
+  for (const std::string& arg : final_args) {
+    LOG(ERROR) << "Got arg: " << arg;
+  }
+
+  // TODO: better cli interface
+  // Add .proto file inputs to FileData list
+  for (const std::string& arg : final_args) {
+    if (absl::EndsWith(arg, ".proto")) {
+      LOG(ERROR) << "Adding proto to file data: " << arg;
+      kythe::proto::FileData protoFile;
+      protoFile.set_content(ReadTextFile(arg));
+      protoFile.mutable_info()->set_path(arg);
+      // TODO: set digest?
+      files.push_back(std::move(protoFile));
+    } else {
+      LOG(ERROR) << "Ignoring arg: " << arg;
+    }
+  }
+
+  LOG(ERROR) << "files size " << files.size();
+
+  cu.add_source_file(FLAGS_text_proto_file);
 
   {
     google::protobuf::io::FileOutputStream raw_output(write_fd);
