@@ -40,6 +40,23 @@ std::string StringifyKind(NodeKindID kind) {
 std::string StringifyKind(EdgeKindID kind) {
   return std::string(spelling_of(kind));
 }
+
+class LoggingMultiFileErrorCollector
+    : public google::protobuf::compiler::MultiFileErrorCollector {
+ public:
+  void AddError(const std::string& filename, int line, int column,
+                const std::string& message) override {
+    LOG(ERROR) << "ErrorCollector filename: " << filename << "line " << line
+               << "; column: " << column << "; msg: " << message;
+  }
+
+  void AddWarning(const std::string& filename, int line, int column,
+                  const std::string& message) override {
+    LOG(ERROR) << "ErrorCollector warning filename: " << filename << "line "
+               << line << "; column: " << column << "; msg: " << message;
+  }
+};
+
 }  // anonymous namespace
 
 VName VNameFromFullPath(const std::string& path) {
@@ -148,8 +165,11 @@ void TextProtoAnalyzer::DoIt() {
 
   PreloadedProtoFileTree file_reader(&path_substitutions,
                                      &file_substitution_cache);
-  google::protobuf::compiler::SourceTreeDescriptorDatabase descriptor_db(
-      &file_reader);
+  LoggingMultiFileErrorCollector error_collector;
+  google::protobuf::compiler::Importer proto_importer(&file_reader,
+                                                      &error_collector);
+
+  std::vector<std::string> proto_filenames;
 
   const proto::FileData* pbtxt_file_data = nullptr;
   for (const auto& file_data : *files_) {
@@ -161,14 +181,24 @@ void TextProtoAnalyzer::DoIt() {
     }
 
     LOG(ERROR) << "Added file to descriptor db: " << file_data.info().path();
-    file_reader.AddFile(file_data.info().path(), file_data.content());
+    CHECK(file_reader.AddFile(file_data.info().path(), file_data.content()));
+
+    proto_filenames.push_back(file_data.info().path());
   }
+
+  // Build protodb/pool
+  for (const std::string& fname : proto_filenames) {
+    LOG(ERROR) << "importing into db/pool: " << fname;
+    CHECK(proto_importer.Import(fname)) << "Error importing proto file: " << fname;
+    // LOG(ERROR) << "Last SourceTree error: "
+               // << file_reader.GetLastErrorMessage();
+  }
+
   CHECK(pbtxt_file_data != nullptr)
       << "Couldn't find textproto source in file data";
-  google::protobuf::DescriptorPool preloaded_pool(&descriptor_db);
 
-  const google::protobuf::DescriptorPool* descriptor_pool = &preloaded_pool;
-  // google::protobuf::DescriptorPool::generated_pool();
+  const google::protobuf::DescriptorPool* descriptor_pool =
+      proto_importer.pool();
 
   google::protobuf::TextFormat::Parser parser;
   // relax parser restrictions - even if the proto is partially ill-defined,
@@ -182,11 +212,9 @@ void TextProtoAnalyzer::DoIt() {
 
   const google::protobuf::Descriptor* msgType =
       descriptor_pool->FindMessageTypeByName(msg_type_name_);
-      LOG(ERROR) << "msg type name: " << msg_type_name_;
+  LOG(ERROR) << "msg type name: " << msg_type_name_;
   CHECK(msgType != nullptr) << "Unable to find proto in descriptor pool";
   LOG(ERROR) << "descriptor: " << msgType->DebugString();
-
-  // kythe::proto::CompilationUnit proto;
 
   google::protobuf::DynamicMessageFactory msg_factory;
   std::unique_ptr<google::protobuf::Message> proto(
@@ -209,7 +237,7 @@ void TextProtoAnalyzer::DoIt() {
 
     VName file_vname;
 
-    // TODO: recursively handle messag types
+    // TODO: recursively handle message types
     // TODO: handle extensions / message sets
     // TODO: handle comments?
 
@@ -239,5 +267,5 @@ void TextProtoAnalyzer::DoIt() {
   }
 }
 
-};  // namespace lang_textproto
-};  // namespace kythe
+}  // namespace lang_textproto
+}  // namespace kythe

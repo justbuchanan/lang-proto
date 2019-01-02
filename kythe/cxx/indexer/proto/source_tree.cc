@@ -48,11 +48,13 @@ std::string StringReplaceFirst(absl::string_view s, absl::string_view oldsub,
 bool PreloadedProtoFileTree::AddFile(const std::string& filename,
                                      const std::string& contents) {
   VLOG(1) << filename << " added to PreloadedProtoFileTree";
+  LOG(ERROR) << filename << " added to PreloadedProtoFileTree";
   return InsertIfNotPresent(&file_map_, filename, contents);
 }
 
 google::protobuf::io::ZeroCopyInputStream* PreloadedProtoFileTree::Open(
     const std::string& filename) {
+  LOG(ERROR) << "IMPORTANT FileTree Open() called for file: " << filename;
   last_error_ = "";
 
   const std::string* cached_path = FindOrNull(*file_mapping_cache_, filename);

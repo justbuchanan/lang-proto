@@ -1,6 +1,7 @@
 cc_binary(
-    name = "main",
+    name = "indexer",
     srcs = ["main.cc"],
+    visibility = ["//visibility:public"],
     deps = [
         ":analyzer",
         "@com_google_protobuf//:protobuf",
