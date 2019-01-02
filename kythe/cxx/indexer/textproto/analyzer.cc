@@ -130,7 +130,7 @@ VName TextProtoAnalyzer::CreateAndAddAnchorNode(
 }
 
 void TextProtoAnalyzer::DoIt() {
-  LOG(INFO) << "Processing proto";
+  LOG(ERROR) << "Processing proto";
 
   CHECK(compilation_unit_->source_file().size() == 1)
       << "Expected CU to contain 1 source file";
@@ -138,7 +138,7 @@ void TextProtoAnalyzer::DoIt() {
   CHECK(files_->size() >= 2)
       << "Must provide at least 2 files: a textproto and 1+ .proto files";
 
-  std::string pbtxt_name = compilation_unit_->source_file(1);
+  std::string pbtxt_name = compilation_unit_->source_file(0);
 
   std::vector<std::pair<std::string, std::string>> path_substitutions;
   absl::node_hash_map<std::string, std::string> file_substitution_cache;
@@ -160,6 +160,7 @@ void TextProtoAnalyzer::DoIt() {
       continue;
     }
 
+    LOG(ERROR) << "Added file to descriptor db: " << file_data.info().path();
     file_reader.AddFile(file_data.info().path(), file_data.content());
   }
   CHECK(pbtxt_file_data != nullptr)
@@ -181,8 +182,9 @@ void TextProtoAnalyzer::DoIt() {
 
   const google::protobuf::Descriptor* msgType =
       descriptor_pool->FindMessageTypeByName(msg_type_name_);
-  CHECK(msgType != nullptr);
-  LOG(INFO) << "descriptor: " << msgType->DebugString();
+      LOG(ERROR) << "msg type name: " << msg_type_name_;
+  CHECK(msgType != nullptr) << "Unable to find proto in descriptor pool";
+  LOG(ERROR) << "descriptor: " << msgType->DebugString();
 
   // kythe::proto::CompilationUnit proto;
 
@@ -192,7 +194,7 @@ void TextProtoAnalyzer::DoIt() {
   if (!parser.ParseFromString(pbtxt_file_data->content(), proto.get())) {
     LOG(FATAL) << "Failed to parse text proto";
   }
-  LOG(INFO) << "parsed: \n" << proto->DebugString();
+  LOG(ERROR) << "parsed: \n" << proto->DebugString();
 
   const google::protobuf::Reflection* reflection = proto->GetReflection();
 
@@ -203,7 +205,7 @@ void TextProtoAnalyzer::DoIt() {
   reflection->ListFields(*proto, &fieldsThatAreSet);
 
   for (auto& field : fieldsThatAreSet) {
-    LOG(INFO) << "Looking for field: " << field->DebugString();
+    LOG(ERROR) << "Looking for field: " << field->DebugString();
 
     VName file_vname;
 
@@ -217,20 +219,20 @@ void TextProtoAnalyzer::DoIt() {
       if (loc.line == -1) {
         LOG(ERROR) << "  Not found";
       } else {
-        LOG(INFO) << "  line " << loc.line << ", col: " << loc.column;
+        LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
         CreateAndAddAnchorNode(file_vname, field, loc);
       }
     } else {
       // repeated
       int count = reflection->FieldSize(*proto, field);
-      LOG(INFO) << "  repeated field count " << count;
+      LOG(ERROR) << "  repeated field count " << count;
 
       for (int i = 0; i < count; i++) {
-        LOG(INFO) << "  index " << i;
+        LOG(ERROR) << "  index " << i;
         google::protobuf::TextFormat::ParseLocation loc =
             infoTree.GetLocation(field, i);
         CHECK(loc.line != -1) << "  Not found this should never happen";
-        LOG(INFO) << "  line " << loc.line << ", col: " << loc.column;
+        LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
         CreateAndAddAnchorNode(file_vname, field, loc);
       }
     }
