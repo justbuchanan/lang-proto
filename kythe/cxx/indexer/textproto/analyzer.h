@@ -22,7 +22,9 @@ class TextProtoAnalyzer {
         files_(file_data),
         msg_type_name_(msgTypeName),
         file_vnames_(file_vnames),
-        recorder_(recorder) {}
+        recorder_(recorder) {
+
+        }
 
   void DoIt();
 
@@ -31,6 +33,9 @@ class TextProtoAnalyzer {
   proto::VName CreateAndAddAnchorNode(
       const proto::VName& file, const google::protobuf::FieldDescriptor* field,
       google::protobuf::TextFormat::ParseLocation loc);
+
+  proto::VName VNameFromFullPath(const std::string& path);
+proto::VName VNameFromRelPath(const std::string& simplified_path);
 
   const proto::CompilationUnit* compilation_unit_;
   const std::vector<proto::FileData>* files_;

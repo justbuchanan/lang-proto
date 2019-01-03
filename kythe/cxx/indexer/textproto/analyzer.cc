@@ -59,24 +59,6 @@ class LoggingMultiFileErrorCollector
 
 }  // anonymous namespace
 
-VName VNameFromFullPath(const std::string& path) {
-  // for (const auto& input : unit_->required_input()) {
-  //   if (input.info().path() == path) {
-  //     return input.v_name();
-  //   }
-  // }
-  // return file_vnames_->LookupVName(path);
-
-  return VName();
-}
-
-VName VNameFromRelPath(const std::string& simplified_path) {
-  // string full_path = FindWithDefault(*path_substitution_cache_,
-  //                                         simplified_path, simplified_path);
-  std::string full_path = simplified_path;
-  return VNameFromFullPath(full_path);
-}
-
 // copied from proto_graph_builder.h
 // Returns a VName for the given protobuf descriptor. Descriptors share
 // various member names but do not participate in any sort of inheritance
@@ -146,7 +128,26 @@ VName TextProtoAnalyzer::CreateAndAddAnchorNode(
   return anchor;
 }
 
+VName TextProtoAnalyzer::VNameFromFullPath(const std::string& path) {
+  for (const auto& input : compilation_unit_->required_input()) {
+    if (input.info().path() == path) {
+      return input.v_name();
+    }
+  }
+  return file_vnames_->LookupVName(path);
+}
+
+VName TextProtoAnalyzer::VNameFromRelPath(const std::string& simplified_path) {
+  // string full_path = FindWithDefault(*path_substitution_cache_,
+  //                                         simplified_path, simplified_path);
+
+  // TODO
+  std::string full_path = simplified_path;
+  return VNameFromFullPath(full_path);
+}
+
 void TextProtoAnalyzer::DoIt() {
+
   LOG(ERROR) << "Processing proto";
 
   CHECK(compilation_unit_->source_file().size() == 1)
@@ -155,7 +156,13 @@ void TextProtoAnalyzer::DoIt() {
   CHECK(files_->size() >= 2)
       << "Must provide at least 2 files: a textproto and 1+ .proto files";
 
-  std::string pbtxt_name = compilation_unit_->source_file(0);
+
+
+  std::string pbtxt_name = compilation_unit_->source_file(0); // TODO: string_view
+
+  // file node
+  VName file_vname = VNameFromFullPath(pbtxt_name); // TODO: real vname
+  recorder_->AddProperty(VNameRef(file_vname), NodeKindID::kFile);
 
   std::vector<std::pair<std::string, std::string>> path_substitutions;
   absl::node_hash_map<std::string, std::string> file_substitution_cache;
@@ -197,6 +204,12 @@ void TextProtoAnalyzer::DoIt() {
   CHECK(pbtxt_file_data != nullptr)
       << "Couldn't find textproto source in file data";
 
+
+  // record source text as a fact
+  recorder_->AddProperty(VNameRef(file_vname), PropertyID::kText, pbtxt_file_data->content());
+
+  line_index_ = absl::make_unique<UTF8LineIndex>(pbtxt_file_data->content());
+
   const google::protobuf::DescriptorPool* descriptor_pool =
       proto_importer.pool();
 
@@ -235,8 +248,6 @@ void TextProtoAnalyzer::DoIt() {
   for (auto& field : fieldsThatAreSet) {
     LOG(ERROR) << "Looking for field: " << field->DebugString();
 
-    VName file_vname; // TODO: real vname
-
     // TODO: recursively handle message types
     // TODO: handle extensions / message sets
     // TODO: handle comments?
@@ -244,9 +255,14 @@ void TextProtoAnalyzer::DoIt() {
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =
           infoTree.GetLocation(field, -1 /* non-repeated */);
+
       if (loc.line == -1) {
         LOG(ERROR) << "  Not found";
       } else {
+      // GetLocation() returns 0-indexed values, but UTF8LineIndex expects 1-indexed values
+        loc.line++;
+        // loc.column++; // UTF8LineIndex uses 0-based columns
+
         LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
         CreateAndAddAnchorNode(file_vname, field, loc);
       }
@@ -259,6 +275,11 @@ void TextProtoAnalyzer::DoIt() {
         LOG(ERROR) << "  index " << i;
         google::protobuf::TextFormat::ParseLocation loc =
             infoTree.GetLocation(field, i);
+
+      // GetLocation() returns 0-indexed values, but UTF8LineIndex expects 1-indexed values
+        loc.line++;
+        // loc.column++; // UTF8LineIndex uses 0-based columns
+
         CHECK(loc.line != -1) << "  Not found this should never happen";
         LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
         CreateAndAddAnchorNode(file_vname, field, loc);

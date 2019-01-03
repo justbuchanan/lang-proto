@@ -39,7 +39,7 @@ def textproto_script_test(
             "//kythe/cxx/indexer/textproto:indexer",
             "@io_kythe//kythe/cxx/verifier",
         ],
-        args = [dups, goal_prefix_flag, convert, "--message_name=%s" % message_name, "--text_proto_file=$(location %s)" % src] + ["$(location %s)" % s for s in protos],
+        args = [dups, goal_prefix_flag, convert, "--message_name=%s" % message_name, "$(location %s)" % src] + ["$(location %s)" % s for s in protos],
         tags = tags,
         size = size,
     )

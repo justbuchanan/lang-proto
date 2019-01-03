@@ -51,13 +51,15 @@ int main(int argc, char* argv[]) {
       R"(Command-line frontend for the Kythe TextProto indexer.
 
 Examples:
-  indexer -o foo.bin -- --text_proto_file foo.textproto --message_name "my.namespace.MyMessage"
-  indexer --text_proto_file bar.textproto | verifier foo.textproto bar.textproto")");
+  indexer -o foo.bin --text_proto_file foo.textproto --message_name "my.package.MyMessage"
+  indexer --text_proto_file bar.textproto --message_name | verifier foo.textproto bar.textproto")");
 
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   std::vector<std::string> final_args(argv + 1, argv + argc);
 
   CHECK(FLAGS_message_name.size() > 0) << "Please provide a --message_name";
+  // TODO: auto-detect message name if none is provided
+
   CHECK(FLAGS_text_proto_file.size())
       << "Please provide an input --text_proto_file";
 

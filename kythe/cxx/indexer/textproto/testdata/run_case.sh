@@ -27,8 +27,10 @@ CONVERT_MARKED_SOURCE="$1"; shift
 MESSAGE_NAME="$1"; shift
 TEXT_PROTO_FILE="$1"; shift
 
-"${INDEXER}" -v 1 "$MESSAGE_NAME" "$TEXT_PROTO_FILE" "$@" | \
-    "${VERIFIER}" --show_protos --show_goals "$IGNORE_DUPS" "$GOAL_PREFIX" "$CONVERT_MARKED_SOURCE" "$@"
+echo "TEXT PROTO: $TEXT_PROTO_FILE"
+
+"${INDEXER}" -v 1 "$MESSAGE_NAME" "--text_proto_file=$TEXT_PROTO_FILE" "$@" | \
+    "${VERIFIER}" --show_protos --show_goals "$IGNORE_DUPS" "$GOAL_PREFIX" "$CONVERT_MARKED_SOURCE" "$TEXT_PROTO_FILE"
 RESULTS=( "${PIPESTATUS[0]}" "${PIPESTATUS[1]}" )
 if [[ "${RESULTS[0]}" -ne 0 ]]; then
   echo "[ FAILED INDEX: $* (error code ${RESULTS[0]}) ]"
