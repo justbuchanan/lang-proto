@@ -5,6 +5,7 @@
 #include <string>
 #include "google/protobuf/text_format.h"
 #include "kythe/cxx/common/indexing/KytheGraphRecorder.h"
+#include "kythe/cxx/common/file_vname_generator.h"
 #include "kythe/cxx/common/utf8_line_index.h"
 #include "kythe/proto/analysis.pb.h"
 
@@ -16,10 +17,11 @@ class TextProtoAnalyzer {
  public:
   TextProtoAnalyzer(const proto::CompilationUnit* cu,
                     const std::vector<proto::FileData>* file_data,
-                    std::string msgTypeName, KytheGraphRecorder* recorder)
+                    std::string msgTypeName, FileVNameGenerator *file_vnames, KytheGraphRecorder* recorder)
       : compilation_unit_(cu),
         files_(file_data),
         msg_type_name_(msgTypeName),
+        file_vnames_(file_vnames),
         recorder_(recorder) {}
 
   void DoIt();
@@ -33,6 +35,10 @@ class TextProtoAnalyzer {
   const proto::CompilationUnit* compilation_unit_;
   const std::vector<proto::FileData>* files_;
   const std::string msg_type_name_;
+
+  // A generator for consistently mapping file paths to VNames.
+  FileVNameGenerator* file_vnames_;
+
   KytheGraphRecorder* recorder_;
   std::unique_ptr<const UTF8LineIndex> line_index_;
 };

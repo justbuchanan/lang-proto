@@ -28,7 +28,7 @@ MESSAGE_NAME="$1"; shift
 TEXT_PROTO_FILE="$1"; shift
 
 "${INDEXER}" -v 1 "$MESSAGE_NAME" "$TEXT_PROTO_FILE" "$@" | \
-    "${VERIFIER}" "$IGNORE_DUPS" "$GOAL_PREFIX" "$CONVERT_MARKED_SOURCE" "$@"
+    "${VERIFIER}" --show_protos --show_goals "$IGNORE_DUPS" "$GOAL_PREFIX" "$CONVERT_MARKED_SOURCE" "$@"
 RESULTS=( "${PIPESTATUS[0]}" "${PIPESTATUS[1]}" )
 if [[ "${RESULTS[0]}" -ne 0 ]]; then
   echo "[ FAILED INDEX: $* (error code ${RESULTS[0]}) ]"

@@ -235,7 +235,7 @@ void TextProtoAnalyzer::DoIt() {
   for (auto& field : fieldsThatAreSet) {
     LOG(ERROR) << "Looking for field: " << field->DebugString();
 
-    VName file_vname;
+    VName file_vname; // TODO: real vname
 
     // TODO: recursively handle message types
     // TODO: handle extensions / message sets

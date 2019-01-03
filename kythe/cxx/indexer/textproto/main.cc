@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include "kythe/cxx/common/file_vname_generator.h"
 #include "absl/strings/match.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/io/coded_stream.h"
@@ -109,10 +110,11 @@ Examples:
     kythe::FileOutputStream kythe_output(&raw_output);
     kythe_output.set_flush_after_each_entry(FLAGS_flush_after_each_entry);
 
+    kythe::FileVNameGenerator file_vnames;
     kythe::KytheGraphRecorder recorder(&kythe_output);
 
     kythe::lang_textproto::TextProtoAnalyzer analyzer(
-        &cu, &files, FLAGS_message_name, &recorder);
+        &cu, &files, FLAGS_message_name, &file_vnames, &recorder);
     analyzer.DoIt();
   }
 
