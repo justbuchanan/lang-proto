@@ -229,7 +229,7 @@ void TextProtoAnalyzer::DoIt() {
         // PropertyID::kLocationStartOffset, begin);
         
         // add ref to proto field
-        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRefCall, VNameRef(proto_field_v_name));
+        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef, VNameRef(proto_field_v_name));
       }
     } else {
       // repeated
