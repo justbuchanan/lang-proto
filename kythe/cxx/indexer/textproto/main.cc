@@ -92,9 +92,9 @@ Examples:
   int write_fd = STDOUT_FILENO;
   if (FLAGS_o != "-") {
     // TODO: do we need all these flags?
-    CHECK(::open(FLAGS_o.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
-                 S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) != -1)
-        << "Can't open output file";
+    write_fd = ::open(FLAGS_o.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
+                      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    CHECK(write_fd != -1) << "Can't open output file";
   }
 
   {

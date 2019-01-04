@@ -25,6 +25,10 @@ message MyMessage {
 
     //- @repeated_message defines/binding RepeatedMessage?
     repeated Message1 repeated_message = 6;
+
+
+    //- @field5 defines/binding Field5?
+    repeated bool field5 = 7;
 }
 
 // TODO: import proto to exercise linking
