@@ -13,85 +13,63 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def _simple_flag(flagname, condition):
-    if condition:
-        return flagname + "=true"
-    return flagname + "=false"
 
-def textproto_script_test(
-        script,
-        name,
-        src, # textproto file
-        protos, # list of 1+ .proto files
-        message_name,
-        tags,
-        size,
-        ignore_dups,
-        goal_prefix,
-        convert_marked_source):
-    dups = _simple_flag("--ignore_dups", ignore_dups)
-    convert = _simple_flag("--convert_marked_source", convert_marked_source)
-    goal_prefix_flag = "--goal_prefix=\"" + goal_prefix + "\""
-    native.sh_test(
-        name = name,
-        srcs = ["//kythe/cxx/indexer/textproto/testdata:" + script],
-        data = [src] + protos + [
-            "//kythe/cxx/indexer/textproto:indexer",
-            "@io_kythe//kythe/cxx/verifier",
-        ],
-        args = [dups, goal_prefix_flag, convert, "--message_name=%s" % message_name, "$(location %s)" % src] + ["$(location %s)" % s for s in protos],
-        tags = tags,
-        size = size,
-    )
-
-# A verifier test that should pass and trigger no indexer errors.
 def textproto_indexer_test(
         name,
-        src, # textproto file
-        protos, # list of 1+ .proto files
-        message_name,
-        deps = [],
-        tags = [],
-        size = "small",
-        ignore_dups = True,
-        goal_prefix = "#-",
-        convert_marked_source = False):
-    textproto_script_test(
-        script = "run_case.sh",
-        name = name,
-        src = src,
-        protos = protos,
-        message_name = message_name,
-        tags = tags,
-        size = size,
-        ignore_dups = ignore_dups,
-        goal_prefix = goal_prefix,
-        convert_marked_source = convert_marked_source,
+        textproto,
+        protos,
+        message_name):
+    # Index textproto
+    pbtxt_facts = name + "_pbtxt_facts"
+    native.genrule(
+        name = pbtxt_facts,
+        srcs = [textproto] + protos,
+        outs = [name + "_pbtxt.facts"],
+        cmd = "$(location //kythe/cxx/indexer/textproto:indexer)" +
+              " --text_proto_file=$(location %s) -o $(OUTS) --message_name=%s " % (textproto, message_name) +
+              " ".join(["$(location %s)" % p for p in protos]),
+        tools = ["//kythe/cxx/indexer/textproto:indexer"],
     )
 
-# # A test whose sources will trigger an indexer error but that should not
-# # cause the indexer to crash.
-# def textproto_error_test(
-#         name,
-#         srcs,
-#         deps = [],
-#         tags = [],
-#         size = "small",
-#         ignore_dups = True,
-#         goal_prefix = "#-",
-#         convert_marked_source = False):
-#     proto_script_test(
-#         script = "error_case.sh",
-#         name = name,
-#         srcs = [
-#             "basic/nested-message-field.proto",
-#         ] + srcs + [
-#             "basic/nested-message.proto",
-#         ],
-#         deps = deps,
-#         tags = tags,
-#         size = size,
-#         ignore_dups = ignore_dups,
-#         goal_prefix = goal_prefix,
-#         convert_marked_source = convert_marked_source,
-#     )
+    # Index protos
+    proto_facts = name + "_proto_facts"
+    native.genrule(
+        name = proto_facts,
+        srcs = protos,
+        outs = [name+"_proto.facts"],
+        cmd = "$(location //kythe/cxx/indexer/proto:indexer) -o $(OUTS) " +
+              " ".join(["$(location %s)" % p for p in protos]),
+        tools = ["//kythe/cxx/indexer/proto:indexer"],
+    )
+
+    # Aggregate graph facts into single file to pass to verifier
+    agg_facts = name + "_agg_facts"
+    native.genrule(
+        name = agg_facts,
+        srcs = [
+            pbtxt_facts,
+            proto_facts,
+        ],
+        outs = [name + "_agg.facts"],
+        cmd = "cat $(SRCS) > $(OUTS)",
+    )
+
+    # Run verifier
+    native.sh_test(
+        name = name,
+        srcs = ["verifier_wrapper.sh"],
+        args = [
+            "$(location %s)" % agg_facts,
+            " ".join(["$(location %s)" % p for p in protos]),
+            "--show_protos",
+            "--show_goals",
+            # goal regex matches both "//-" (for .proto) and "#-" (for textproto)
+            "--goal_regex=\"\s*(?:#|(?://))\-(.*)\"",
+            "$(location %s)" % textproto,
+        ],
+        data = [
+            textproto,
+            agg_facts,
+            "@io_kythe//kythe/cxx/verifier",
+        ] + protos,
+    )
