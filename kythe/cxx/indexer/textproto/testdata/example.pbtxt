@@ -1,9 +1,10 @@
-#- @field1 ref ProtoField1
+#- @field1 ref Field1
 field1: "hello"
 
 field2: 5
 
-#- @msg1 ref Msg1Field
+#- @msg1 ref Msg1
 msg1 {
+    # @str_field ref Msg1StrField
     str_field: "hello"
 }
