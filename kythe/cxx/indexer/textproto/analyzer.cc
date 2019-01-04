@@ -240,7 +240,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
               *proto, field, /*message_factory=*/nullptr);
           const google::protobuf::Descriptor* subdescriptor =
               field->message_type();
-          // AnalyzeMessage(file_vname, &submessage, subdescriptor, subtree);
+          AnalyzeMessage(file_vname, &submessage, subdescriptor, subtree);
         }
       }
     } else {

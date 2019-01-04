@@ -14,6 +14,6 @@ repeated_field: "second"
 
 #- @msg1 ref Msg1
 msg1 {
-    # @str_field ref Msg1StrField
+    #- @str_field ref Msg1StrField
     str_field: "hello"
 }
