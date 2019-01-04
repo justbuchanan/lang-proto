@@ -30,7 +30,7 @@ class TextProtoAnalyzer {
         file_vnames_(file_vnames),
         recorder_(recorder) {}
 
-  void DoIt();
+  void Analyze();
 
  private:
   void AddNode(const proto::VName& node_name, NodeKindID node_kind);
@@ -63,12 +63,7 @@ class TextProtoAnalyzer {
           vname_for_rel_path_;
       proto::VName* vname_;
     };
-    // VName vname_for_rel_path;
     const auto& vname_for_rel_path = [this](const std::string& path) {
-      // return VNameForProtoPath(file_vname, )
-      // TODO
-      // VName v;
-      // return v;
       return VNameFromRelPath(path);
     };
     PathSink path_sink(vname_for_rel_path, &vname);

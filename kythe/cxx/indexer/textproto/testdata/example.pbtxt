@@ -1,4 +1,4 @@
-#- @field1 ref ProtoField1?
+#- @field1 ref ProtoField1
 field1: "hello"
 
 field2: 5

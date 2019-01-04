@@ -69,7 +69,7 @@ VName TextProtoAnalyzer::CreateAndAddAnchorNode(
   anchor.set_language(kLanguageName);
 
   const int begin = line_index_->ComputeByteOffset(loc.line, loc.column);
-  const int end = begin + field->name().size();  // TODO: subtract one?
+  const int end = begin + field->name().size();
 
   auto* const signature = anchor.mutable_signature();
   absl::StrAppend(signature, "@", begin, ":", end);
@@ -100,7 +100,7 @@ VName TextProtoAnalyzer::VNameFromRelPath(const std::string& simplified_path) {
   return VNameFromFullPath(full_path);
 }
 
-void TextProtoAnalyzer::DoIt() {
+void TextProtoAnalyzer::Analyze() {
   LOG(ERROR) << "Processing proto";
 
   CHECK(compilation_unit_->source_file().size() == 1)
@@ -118,6 +118,7 @@ void TextProtoAnalyzer::DoIt() {
 
   std::vector<std::pair<std::string, std::string>> path_substitutions;
   absl::node_hash_map<std::string, std::string> file_substitution_cache;
+  // TODO
   // ParsePathSubstitutions(unit, &path_substitutions);
   // ProtoFileReader file_reader(&path_substitutions, &file_substitution_cache);
   // google::protobuf::util::ProtoFileParser proto_parser(&file_reader);
@@ -150,8 +151,6 @@ void TextProtoAnalyzer::DoIt() {
     LOG(ERROR) << "importing into db/pool: " << fname;
     CHECK(proto_importer.Import(fname))
         << "Error importing proto file: " << fname;
-    // LOG(ERROR) << "Last SourceTree error: "
-    // << file_reader.GetLastErrorMessage();
   }
 
   CHECK(pbtxt_file_data != nullptr)
@@ -180,7 +179,7 @@ void TextProtoAnalyzer::DoIt() {
       descriptor_pool->FindMessageTypeByName(msg_type_name_);
   LOG(ERROR) << "msg type name: " << msg_type_name_;
   CHECK(msgType != nullptr) << "Unable to find proto in descriptor pool";
-  LOG(ERROR) << "descriptor: " << msgType->DebugString();
+  // LOG(ERROR) << "descriptor: " << msgType->DebugString();
 
   google::protobuf::DynamicMessageFactory msg_factory;
   std::unique_ptr<google::protobuf::Message> proto(
@@ -205,8 +204,7 @@ void TextProtoAnalyzer::DoIt() {
     // TODO: handle extensions / message sets
     // TODO: handle comments?
 
-
-        VName proto_field_v_name = VNameForDescriptor(field);
+    VName proto_field_v_name = VNameForDescriptor(field);
 
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =
@@ -223,13 +221,9 @@ void TextProtoAnalyzer::DoIt() {
         LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
         VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
 
-        // TODO: semantic node
-        // AddNode(anchor, NodeKindID::kAnchor);
-        // recorder_->AddProperty(VNameRef(anchor),
-        // PropertyID::kLocationStartOffset, begin);
-        
         // add ref to proto field
-        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef, VNameRef(proto_field_v_name));
+        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
+                           VNameRef(proto_field_v_name));
       }
     } else {
       // repeated
@@ -250,19 +244,9 @@ void TextProtoAnalyzer::DoIt() {
         LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
         VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
 
-        // VName sem_vname = anchor_vname;  // TODO
-        // recorder_->AddProperty(VNameRef(sem_vname), NodeKindID::kVariable);
-        // recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kDefinesBinding,
-        //                    VNameRef(sem_vname));
-
-
         // add ref to proto field
-        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRefCall, VNameRef(proto_field_v_name));
-
-        // TODO: semantic node
-        // AddNode(anchor, NodeKindID::kAnchor);
-        // recorder_->AddProperty(VNameRef(anchor),
-        // PropertyID::kLocationStartOffset, begin);
+        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRefCall,
+                           VNameRef(proto_field_v_name));
       }
     }
   }

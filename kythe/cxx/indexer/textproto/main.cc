@@ -103,7 +103,7 @@ Examples:
     }
   }
 
-  LOG(ERROR) << "files size " << files.size();
+  LOG(ERROR) << "num files: " << files.size();
 
   cu.add_source_file(FLAGS_text_proto_file);
 
@@ -117,7 +117,7 @@ Examples:
 
     kythe::lang_textproto::TextProtoAnalyzer analyzer(
         &cu, &files, FLAGS_message_name, &file_vnames, &recorder);
-    analyzer.DoIt();
+    analyzer.Analyze();
   }
 
   CHECK(::close(write_fd) == 0) << "Error closing output file";
