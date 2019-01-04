@@ -7,6 +7,11 @@ field1: "hello"
 #- @field2 ref Field2
 field2: 0
 
+#- @repeated_field ref RepeatedField
+repeated_field: "first"
+#- @repeated_field ref RepeatedField
+repeated_field: "second"
+
 #- @msg1 ref Msg1
 msg1 {
     # @str_field ref Msg1StrField
