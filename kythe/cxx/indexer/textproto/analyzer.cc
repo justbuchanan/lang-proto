@@ -211,7 +211,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
     // TODO: handle extensions / message sets
     // TODO: handle comments?
 
-    VName proto_field_v_name = VNameForDescriptor(field);
+    VName field_vname = VNameForDescriptor(field);
 
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =
@@ -230,7 +230,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
 
         // add ref to proto field
         recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
-                           VNameRef(proto_field_v_name));
+                           VNameRef(field_vname));
       }
     } else {
       // repeated
@@ -238,7 +238,8 @@ void TextProtoAnalyzer::AnalyzeMessage(
       LOG(ERROR) << "  repeated field count " << count;
 
       for (int i = 0; i < count; i++) {
-        LOG(ERROR) << "  index " << i;
+        // ProcessField(file_vname, field_vname, field, infoTree, i);
+
         google::protobuf::TextFormat::ParseLocation loc =
             infoTree->GetLocation(field, i);
 
@@ -252,12 +253,33 @@ void TextProtoAnalyzer::AnalyzeMessage(
         VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
 
         // add ref to proto field
-        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRefCall,
-                           VNameRef(proto_field_v_name));
+        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
+                           VNameRef(field_vname));
       }
     }
   }
 }
+
+// void TextProtoAnalyzer::ProcessField(
+//     const proto::VName& file_vname, const proto::VName& field_vname,
+//     const google::protobuf::FieldDescriptor* field,
+//     const google::protobuf::TextFormat::ParseInfoTree* infoTree, int i) {
+//   google::protobuf::TextFormat::ParseLocation loc =
+//       infoTree->GetLocation(field, i);
+
+//   // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
+//   // 1-indexed values
+//   loc.line++;
+//   // loc.column++; // UTF8LineIndex uses 0-based columns
+
+//   CHECK(loc.line != -1) << "  Not found this should never happen";
+//   LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
+//   VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
+
+//   // add ref to proto field
+//   recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
+//                      VNameRef(field_vname));
+// }
 
 }  // namespace lang_textproto
 }  // namespace kythe

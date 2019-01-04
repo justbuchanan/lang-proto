@@ -38,6 +38,12 @@ class TextProtoAnalyzer {
       const google::protobuf::Descriptor* descriptor,
       const google::protobuf::TextFormat::ParseInfoTree* infoTree);
 
+  // void ProcessField(const proto::VName& file_vname,
+  //                   const proto::VName& field_vname,
+  //                   const google::protobuf::FieldDescriptor* field,
+  //                   const google::protobuf::TextFormat::ParseInfoTree*
+  //                   infoTree, int i);
+
   void AddNode(const proto::VName& node_name, NodeKindID node_kind);
   proto::VName CreateAndAddAnchorNode(
       const proto::VName& file, const google::protobuf::FieldDescriptor* field,
