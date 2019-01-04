@@ -189,6 +189,13 @@ void TextProtoAnalyzer::Analyze() {
   }
   LOG(ERROR) << "parsed: \n" << proto->DebugString();
 
+  AnalyzeMessage(file_vname, proto.get(), msgType, &infoTree);
+}
+
+void TextProtoAnalyzer::AnalyzeMessage(
+    const proto::VName& file_vname, const google::protobuf::Message* proto,
+    const google::protobuf::Descriptor* descriptor,
+    const google::protobuf::TextFormat::ParseInfoTree* infoTree) {
   const google::protobuf::Reflection* reflection = proto->GetReflection();
 
   // Iterate across all fields in the message. For proto1 and 2, each field has
@@ -196,8 +203,8 @@ void TextProtoAnalyzer::Analyze() {
   // only look at fields we know are set (with reflection.ListFields()). Proto3
   // however does not have "has" bits, so this approach would not work, thus we
   // look at every field.
-  for (int i = 0; i < msgType->field_count(); i++) {
-    const FieldDescriptor* field = msgType->field(i);
+  for (int i = 0; i < descriptor->field_count(); i++) {
+    const FieldDescriptor* field = descriptor->field(i);
     LOG(ERROR) << "Looking for field: " << field->DebugString();
 
     // TODO: recursively handle message types
@@ -208,7 +215,7 @@ void TextProtoAnalyzer::Analyze() {
 
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =
-          infoTree.GetLocation(field, -1 /* non-repeated */);
+          infoTree->GetLocation(field, -1 /* non-repeated */);
 
       if (loc.line == -1) {
         LOG(ERROR) << "  Not found";
@@ -233,7 +240,7 @@ void TextProtoAnalyzer::Analyze() {
       for (int i = 0; i < count; i++) {
         LOG(ERROR) << "  index " << i;
         google::protobuf::TextFormat::ParseLocation loc =
-            infoTree.GetLocation(field, i);
+            infoTree->GetLocation(field, i);
 
         // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
         // 1-indexed values

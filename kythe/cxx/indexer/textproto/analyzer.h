@@ -33,6 +33,11 @@ class TextProtoAnalyzer {
   void Analyze();
 
  private:
+  void AnalyzeMessage(
+      const proto::VName& file_vname, const google::protobuf::Message* proto,
+      const google::protobuf::Descriptor* descriptor,
+      const google::protobuf::TextFormat::ParseInfoTree* infoTree);
+
   void AddNode(const proto::VName& node_name, NodeKindID node_kind);
   proto::VName CreateAndAddAnchorNode(
       const proto::VName& file, const google::protobuf::FieldDescriptor* field,
