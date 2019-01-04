@@ -22,7 +22,7 @@ $PBTXT_INDEXER_BIN \
     > $PBTXT_ENTRIES
 
 # Verify both files, ensuring that xrefs work.
-cat "$PB_ENTRIES" "$PBTXT_ENTRIES" | \
-    "$VERIFIER_BIN" $EXAMPLE_PBTXT $EXAMPLE_PB \
+cat $PB_ENTRIES $PBTXT_ENTRIES | \
+    $VERIFIER_BIN $EXAMPLE_PBTXT $EXAMPLE_PB \
     --show_goals \
     --goal_regex="\s*(?:#|(?://))\-(.*)" 

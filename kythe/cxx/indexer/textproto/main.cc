@@ -53,70 +53,58 @@ int main(int argc, char* argv[]) {
 Examples:
   indexer -o foo.bin --text_proto_file foo.textproto --message_name "my.package.MyMessage"
   indexer --text_proto_file bar.textproto --message_name | verifier foo.textproto bar.textproto")");
-
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   std::vector<std::string> final_args(argv + 1, argv + argc);
 
   CHECK(FLAGS_message_name.size() > 0) << "Please provide a --message_name";
   // TODO: auto-detect message name if none is provided
 
-  CHECK(FLAGS_text_proto_file.size())
+  CHECK(FLAGS_text_proto_file.size() > 0)
       << "Please provide an input --text_proto_file";
 
-  const std::string input = ReadTextFile(FLAGS_text_proto_file);
-
-  int write_fd = STDOUT_FILENO;
-  if (FLAGS_o != "-") {
-    write_fd = ::open(FLAGS_o.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
-                      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    if (write_fd == -1) {
-      perror("Can't open output file");
-      exit(1);
-    }
-  }
-
-  kythe::proto::CompilationUnit cu;
   std::vector<kythe::proto::FileData> files;
 
-  kythe::proto::FileData pbtxtFile;
-  pbtxtFile.set_content(input);
-  pbtxtFile.mutable_info()->set_path(FLAGS_text_proto_file);
-  // TODO: digest?
-  files.push_back(std::move(pbtxtFile));
-
-  for (const std::string& arg : final_args) {
-    LOG(ERROR) << "Got arg: " << arg;
+  {
+    kythe::proto::FileData pbtxt_file;
+    pbtxt_file.set_content(ReadTextFile(FLAGS_text_proto_file));
+    pbtxt_file.mutable_info()->set_path(FLAGS_text_proto_file);
+    // TODO: digest?
+    files.push_back(std::move(pbtxt_file));
   }
 
   // TODO: better cli interface
   // Add .proto file inputs to FileData list
   for (const std::string& arg : final_args) {
-    if (absl::EndsWith(arg, ".proto")) {
-      LOG(ERROR) << "Adding proto to file data: " << arg;
-      kythe::proto::FileData protoFile;
-      protoFile.set_content(ReadTextFile(arg));
-      protoFile.mutable_info()->set_path(arg);
-      // TODO: set digest?
-      files.push_back(std::move(protoFile));
-    } else {
-      LOG(ERROR) << "Ignoring arg: " << arg;
-    }
+    CHECK(absl::EndsWith(arg, ".proto"))
+        << "Invalid argument: " << arg << ". Expected a .proto file";
+    LOG(ERROR) << "Adding proto to file data: " << arg;
+    kythe::proto::FileData proto_file;
+    proto_file.set_content(ReadTextFile(arg));
+    proto_file.mutable_info()->set_path(arg);
+    // TODO: set digest?
+    files.push_back(std::move(proto_file));
   }
 
-  LOG(ERROR) << "num files: " << files.size();
+  kythe::proto::CompilationUnit unit;
+  unit.add_source_file(FLAGS_text_proto_file);
 
-  cu.add_source_file(FLAGS_text_proto_file);
+  int write_fd = STDOUT_FILENO;
+  if (FLAGS_o != "-") {
+    // TODO: do we need all these flags?
+    CHECK(::open(FLAGS_o.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
+                 S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) != -1)
+        << "Can't open output file";
+  }
 
   {
     google::protobuf::io::FileOutputStream raw_output(write_fd);
     kythe::FileOutputStream kythe_output(&raw_output);
     kythe_output.set_flush_after_each_entry(FLAGS_flush_after_each_entry);
-
-    kythe::FileVNameGenerator file_vnames;
     kythe::KytheGraphRecorder recorder(&kythe_output);
 
+    kythe::FileVNameGenerator file_vnames;
     kythe::lang_textproto::TextProtoAnalyzer analyzer(
-        &cu, &files, FLAGS_message_name, &file_vnames, &recorder);
+        &unit, &files, FLAGS_message_name, &file_vnames, &recorder);
     analyzer.Analyze();
   }
 
