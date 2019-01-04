@@ -20,10 +20,11 @@ namespace lang_textproto {
 // The canonical name for the textproto language in Kythe
 static const char kLanguageName[] = "protobuf_textformat";
 
-void AnalyzeCompilationUnit(
-    const proto::CompilationUnit* unit,
-    const std::vector<proto::FileData>* file_data, std::string message_name,
-    const FileVNameGenerator* file_vnames, KytheGraphRecorder* recorder);
+void AnalyzeCompilationUnit(const proto::CompilationUnit* unit,
+                            const std::vector<proto::FileData>* file_data,
+                            std::string message_name,
+                            const FileVNameGenerator* file_vnames,
+                            KytheGraphRecorder* recorder);
 
 };  // namespace lang_textproto
 };  // namespace kythe

@@ -56,14 +56,13 @@ class LoggingMultiFileErrorCollector
 
 }  // anonymous namespace
 
-
-
 // Analyzes a single textproto
 class TextProtoAnalyzer {
  public:
   TextProtoAnalyzer(const proto::CompilationUnit* unit,
                     const std::vector<proto::FileData>* file_data,
-                    std::string message_name, const FileVNameGenerator* file_vnames,
+                    std::string message_name,
+                    const FileVNameGenerator* file_vnames,
                     KytheGraphRecorder* recorder)
       : compilation_unit_(unit),
         files_(file_data),
@@ -96,7 +95,6 @@ class TextProtoAnalyzer {
   // hierarchy, so we're stuck with a template.
   template <typename SomeDescriptor>
   proto::VName VNameForDescriptor(const SomeDescriptor* descriptor) {
-    proto::VName vname;
     class PathSink : public ::google::protobuf::io::AnnotationCollector {
      public:
       PathSink(const std::function<proto::VName(const std::string&)>&
@@ -115,9 +113,10 @@ class TextProtoAnalyzer {
           vname_for_rel_path_;
       proto::VName* vname_;
     };
-    const auto& vname_for_rel_path = [this](const std::string& path) {
-      return VNameFromRelPath(path);
-    };
+
+    proto::VName vname;
+    std::function<proto::VName(const std::string&)> vname_for_rel_path =
+        [this](const std::string& path) { return VNameFromRelPath(path); };
     PathSink path_sink(vname_for_rel_path, &vname);
     // We'd really like to use GetLocationPath here, but it's private, so
     // we have to go through some contortions. On the plus side, this is the
@@ -144,11 +143,6 @@ class TextProtoAnalyzer {
   KytheGraphRecorder* recorder_;
   std::unique_ptr<const UTF8LineIndex> line_index_;
 };
-
-
-
-
-
 
 void TextProtoAnalyzer::AddNode(const VName& node_name, NodeKindID node_kind) {
   VLOG(1) << "Writing node: " << StringifyNode(node_name) << "["
@@ -397,14 +391,15 @@ void TextProtoAnalyzer::AnalyzeMessage(
 //                      VNameRef(field_vname));
 // }
 
-void AnalyzeCompilationUnit(
-    const proto::CompilationUnit* unit,
-    const std::vector<proto::FileData>* file_data, std::string message_name,
-    const FileVNameGenerator* file_vnames, KytheGraphRecorder* recorder) {
+void AnalyzeCompilationUnit(const proto::CompilationUnit* unit,
+                            const std::vector<proto::FileData>* file_data,
+                            std::string message_name,
+                            const FileVNameGenerator* file_vnames,
+                            KytheGraphRecorder* recorder) {
   TextProtoAnalyzer analyzer(unit, file_data, message_name, file_vnames,
                              recorder);
   analyzer.Analyze();
-} 
+}
 
 }  // namespace lang_textproto
 }  // namespace kythe
