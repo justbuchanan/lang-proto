@@ -17,3 +17,15 @@ textproto_indexer_test(
     protos = ["example.proto"],
     tags = ["basic"],
 )
+
+sh_test(
+    name = "xref_test",
+    srcs = ["xref_test.sh"],
+    data = [
+        "example.pbtxt",
+        "example.proto",
+        "//kythe/cxx/indexer/proto:indexer",
+        "//kythe/cxx/indexer/textproto:indexer",
+        "@io_kythe//kythe/cxx/verifier",
+    ],
+)
