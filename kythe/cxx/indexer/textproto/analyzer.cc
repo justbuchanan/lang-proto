@@ -63,7 +63,7 @@ class TextProtoAnalyzer {
  public:
   TextProtoAnalyzer(const proto::CompilationUnit* unit,
                     const std::vector<proto::FileData>* file_data,
-                    std::string message_name, FileVNameGenerator* file_vnames,
+                    std::string message_name, const FileVNameGenerator* file_vnames,
                     KytheGraphRecorder* recorder)
       : compilation_unit_(unit),
         files_(file_data),
@@ -139,7 +139,7 @@ class TextProtoAnalyzer {
   const std::string msg_type_name_;
 
   // A generator for consistently mapping file paths to VNames.
-  FileVNameGenerator* file_vnames_;
+  const FileVNameGenerator* file_vnames_;
 
   KytheGraphRecorder* recorder_;
   std::unique_ptr<const UTF8LineIndex> line_index_;
@@ -400,7 +400,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
 void AnalyzeCompilationUnit(
     const proto::CompilationUnit* unit,
     const std::vector<proto::FileData>* file_data, std::string message_name,
-    FileVNameGenerator* file_vnames, KytheGraphRecorder* recorder) {
+    const FileVNameGenerator* file_vnames, KytheGraphRecorder* recorder) {
   TextProtoAnalyzer analyzer(unit, file_data, message_name, file_vnames,
                              recorder);
   analyzer.Analyze();
