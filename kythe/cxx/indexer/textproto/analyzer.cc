@@ -266,6 +266,17 @@ void TextProtoAnalyzer::AnalyzeMessage(
         // add ref to proto field
         recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
                            VNameRef(field_vname));
+
+        // Handle submessage
+        if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+          google::protobuf::TextFormat::ParseInfoTree* subtree =
+              infoTree->GetTreeForNested(field, i);
+          const google::protobuf::Message& submessage =
+              reflection->GetRepeatedMessage(*proto, field, i);
+          const google::protobuf::Descriptor* subdescriptor =
+              field->message_type();
+          AnalyzeMessage(file_vname, &submessage, subdescriptor, subtree);
+        }
       }
     }
   }

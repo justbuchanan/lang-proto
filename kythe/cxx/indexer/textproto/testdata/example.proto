@@ -22,4 +22,7 @@ message MyMessage {
 
     //- @msg1 defines/binding Msg1?
     Message1 msg1 = 5;
+
+    //- @repeated_message defines/binding RepeatedMessage?
+    repeated Message1 repeated_message = 6;
 }

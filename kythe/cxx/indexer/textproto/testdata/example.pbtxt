@@ -17,3 +17,15 @@ msg1 {
     #- @str_field ref Msg1StrField
     str_field: "hello"
 }
+
+#- @repeated_message ref RepeatedMessage
+repeated_message {
+    #- @str_field ref Msg1StrField
+    str_field: "hello"
+}
+
+#- @repeated_message ref RepeatedMessage
+repeated_message {
+    #- @str_field ref Msg1StrField
+    str_field: "hello"
+}
