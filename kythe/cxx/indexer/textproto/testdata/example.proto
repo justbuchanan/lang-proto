@@ -3,6 +3,7 @@ syntax = "proto3";
 package example;
 
 message MyMessage {
+    //- @field1 defines/binding ProtoField1?
     string field1 = 1;
     int32 field2 = 2;
 }

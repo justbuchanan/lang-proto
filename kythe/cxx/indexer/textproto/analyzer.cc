@@ -9,12 +9,9 @@
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/descriptor_database.h"
 #include "google/protobuf/dynamic_message.h"
-#include "google/protobuf/io/coded_stream.h"
-#include "google/protobuf/io/printer.h"
 #include "google/protobuf/text_format.h"
 #include "kythe/cxx/common/indexing/KytheCachingOutput.h"
 #include "kythe/cxx/common/indexing/KytheGraphRecorder.h"
-#include "kythe/cxx/common/protobuf_metadata_file.h"
 #include "kythe/cxx/indexer/proto/indexer_frontend.h"
 #include "kythe/cxx/indexer/proto/source_tree.h"
 #include "kythe/proto/analysis.pb.h"
@@ -58,49 +55,6 @@ class LoggingMultiFileErrorCollector
 };
 
 }  // anonymous namespace
-
-// copied from proto_graph_builder.h
-// Returns a VName for the given protobuf descriptor. Descriptors share
-// various member names but do not participate in any sort of inheritance
-// hierarchy, so we're stuck with a template.
-template <typename SomeDescriptor>
-VName VNameForDescriptor(const SomeDescriptor* descriptor) {
-  VName vname;
-  class PathSink : public ::google::protobuf::io::AnnotationCollector {
-   public:
-    PathSink(const std::function<VName(const std::string&)>& vname_for_rel_path,
-             VName* vname)
-        : vname_for_rel_path_(vname_for_rel_path), vname_(vname) {}
-
-    void AddAnnotation(size_t begin_offset, size_t end_offset,
-                       const std::string& file_path,
-                       const std::vector<int>& path) override {
-      *vname_ = VNameForProtoPath(vname_for_rel_path_(file_path), path);
-    }
-
-   private:
-    const std::function<VName(const std::string&)>& vname_for_rel_path_;
-    VName* vname_;
-  };
-  // VName vname_for_rel_path;
-  const auto& vname_for_rel_path = [](const std::string& p) {
-    // return VNameForProtoPath(file_vname, )
-    // TODO
-    VName v;
-    return v;
-  };
-  PathSink path_sink(vname_for_rel_path, &vname);
-  // We'd really like to use GetLocationPath here, but it's private, so
-  // we have to go through some contortions. On the plus side, this is the
-  // *exact* same code that protoc backends use for writing out annotations,
-  // so if AddAnnotation ever changes we'll know.
-  std::string s;
-  ::google::protobuf::io::StringOutputStream stream(&s);
-  ::google::protobuf::io::Printer printer(&stream, '$', &path_sink);
-  printer.Print("$0$", "0", "0");
-  printer.Annotate("0", descriptor);
-  return vname;
-}
 
 void TextProtoAnalyzer::AddNode(const VName& node_name, NodeKindID node_kind) {
   VLOG(1) << "Writing node: " << StringifyNode(node_name) << "["
@@ -147,7 +101,6 @@ VName TextProtoAnalyzer::VNameFromRelPath(const std::string& simplified_path) {
 }
 
 void TextProtoAnalyzer::DoIt() {
-
   LOG(ERROR) << "Processing proto";
 
   CHECK(compilation_unit_->source_file().size() == 1)
@@ -156,12 +109,11 @@ void TextProtoAnalyzer::DoIt() {
   CHECK(files_->size() >= 2)
       << "Must provide at least 2 files: a textproto and 1+ .proto files";
 
-
-
-  std::string pbtxt_name = compilation_unit_->source_file(0); // TODO: string_view
+  std::string pbtxt_name =
+      compilation_unit_->source_file(0);  // TODO: string_view
 
   // file node
-  VName file_vname = VNameFromFullPath(pbtxt_name); // TODO: real vname
+  VName file_vname = VNameFromFullPath(pbtxt_name);  // TODO: real vname
   recorder_->AddProperty(VNameRef(file_vname), NodeKindID::kFile);
 
   std::vector<std::pair<std::string, std::string>> path_substitutions;
@@ -196,17 +148,18 @@ void TextProtoAnalyzer::DoIt() {
   // Build protodb/pool
   for (const std::string& fname : proto_filenames) {
     LOG(ERROR) << "importing into db/pool: " << fname;
-    CHECK(proto_importer.Import(fname)) << "Error importing proto file: " << fname;
+    CHECK(proto_importer.Import(fname))
+        << "Error importing proto file: " << fname;
     // LOG(ERROR) << "Last SourceTree error: "
-               // << file_reader.GetLastErrorMessage();
+    // << file_reader.GetLastErrorMessage();
   }
 
   CHECK(pbtxt_file_data != nullptr)
       << "Couldn't find textproto source in file data";
 
-
   // record source text as a fact
-  recorder_->AddProperty(VNameRef(file_vname), PropertyID::kText, pbtxt_file_data->content());
+  recorder_->AddProperty(VNameRef(file_vname), PropertyID::kText,
+                         pbtxt_file_data->content());
 
   line_index_ = absl::make_unique<UTF8LineIndex>(pbtxt_file_data->content());
 
@@ -252,6 +205,9 @@ void TextProtoAnalyzer::DoIt() {
     // TODO: handle extensions / message sets
     // TODO: handle comments?
 
+
+        VName proto_field_v_name = VNameForDescriptor(field);
+
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =
           infoTree.GetLocation(field, -1 /* non-repeated */);
@@ -259,12 +215,21 @@ void TextProtoAnalyzer::DoIt() {
       if (loc.line == -1) {
         LOG(ERROR) << "  Not found";
       } else {
-      // GetLocation() returns 0-indexed values, but UTF8LineIndex expects 1-indexed values
+        // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
+        // 1-indexed values
         loc.line++;
         // loc.column++; // UTF8LineIndex uses 0-based columns
 
         LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
-        CreateAndAddAnchorNode(file_vname, field, loc);
+        VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
+
+        // TODO: semantic node
+        // AddNode(anchor, NodeKindID::kAnchor);
+        // recorder_->AddProperty(VNameRef(anchor),
+        // PropertyID::kLocationStartOffset, begin);
+        
+        // add ref to proto field
+        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRefCall, VNameRef(proto_field_v_name));
       }
     } else {
       // repeated
@@ -276,13 +241,28 @@ void TextProtoAnalyzer::DoIt() {
         google::protobuf::TextFormat::ParseLocation loc =
             infoTree.GetLocation(field, i);
 
-      // GetLocation() returns 0-indexed values, but UTF8LineIndex expects 1-indexed values
+        // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
+        // 1-indexed values
         loc.line++;
         // loc.column++; // UTF8LineIndex uses 0-based columns
 
         CHECK(loc.line != -1) << "  Not found this should never happen";
         LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
-        CreateAndAddAnchorNode(file_vname, field, loc);
+        VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
+
+        // VName sem_vname = anchor_vname;  // TODO
+        // recorder_->AddProperty(VNameRef(sem_vname), NodeKindID::kVariable);
+        // recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kDefinesBinding,
+        //                    VNameRef(sem_vname));
+
+
+        // add ref to proto field
+        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRefCall, VNameRef(proto_field_v_name));
+
+        // TODO: semantic node
+        // AddNode(anchor, NodeKindID::kAnchor);
+        // recorder_->AddProperty(VNameRef(anchor),
+        // PropertyID::kLocationStartOffset, begin);
       }
     }
   }

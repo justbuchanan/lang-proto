@@ -1,12 +1,12 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
-#include "kythe/cxx/common/file_vname_generator.h"
 #include "absl/strings/match.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/io/coded_stream.h"
 #include "google/protobuf/io/printer.h"
 #include "google/protobuf/text_format.h"
+#include "kythe/cxx/common/file_vname_generator.h"
 #include "kythe/cxx/common/indexing/KytheCachingOutput.h"
 #include "kythe/cxx/common/indexing/KytheGraphRecorder.h"
 #include "kythe/cxx/common/protobuf_metadata_file.h"
