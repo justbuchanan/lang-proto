@@ -34,11 +34,10 @@ echo "TEXT PROTO: $TEXT_PROTO_FILE"
 RESULTS=( "${PIPESTATUS[0]}" "${PIPESTATUS[1]}" )
 if [[ "${RESULTS[0]}" -ne 0 ]]; then
   echo "[ FAILED INDEX: $* (error code ${RESULTS[0]}) ]"
-  HAD_ERRORS=1
+  exit 1
 elif [[ "${RESULTS[1]}" -ne 0 ]]; then
   echo "[ FAILED VERIFY: $* ]"
-  HAD_ERRORS=1
+  exit 1
 else
   echo "[ OK: $* ]"
 fi
-exit "$HAD_ERRORS"

@@ -26,3 +26,5 @@ message MyMessage {
     //- @repeated_message defines/binding RepeatedMessage?
     repeated Message1 repeated_message = 6;
 }
+
+// TODO: import proto to exercise linking

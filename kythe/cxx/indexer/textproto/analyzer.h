@@ -20,13 +20,13 @@ namespace lang_textproto {
 // Analyzes a single textproto
 class TextProtoAnalyzer {
  public:
-  TextProtoAnalyzer(const proto::CompilationUnit* cu,
+  TextProtoAnalyzer(const proto::CompilationUnit* unit,
                     const std::vector<proto::FileData>* file_data,
-                    std::string msgTypeName, FileVNameGenerator* file_vnames,
+                    std::string message_name, FileVNameGenerator* file_vnames,
                     KytheGraphRecorder* recorder)
-      : compilation_unit_(cu),
+      : compilation_unit_(unit),
         files_(file_data),
-        msg_type_name_(msgTypeName),
+        msg_type_name_(message_name),
         file_vnames_(file_vnames),
         recorder_(recorder) {}
 
@@ -106,6 +106,15 @@ class TextProtoAnalyzer {
 
 // The canonical name for the textproto language in Kythe
 static const char kLanguageName[] = "protobuf_textformat";
+
+inline void AnalyzeCompilationUnit(
+    const proto::CompilationUnit* unit,
+    const std::vector<proto::FileData>* file_data, std::string message_name,
+    FileVNameGenerator* file_vnames, KytheGraphRecorder* recorder) {
+  TextProtoAnalyzer analyzer(unit, file_data, message_name, file_vnames,
+                             recorder);
+  analyzer.Analyze();
+}
 
 };  // namespace lang_textproto
 };  // namespace kythe

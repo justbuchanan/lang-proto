@@ -25,6 +25,7 @@ DEFINE_string(text_proto_file, "", "Input textproto file");
 
 namespace {
 
+// TODO: can we get this from a library?
 // Opens the given file and returns its contents as a string.
 std::string ReadTextFile(const std::string& path) {
   std::ifstream in_stream(path);
@@ -103,9 +104,8 @@ Examples:
     kythe::KytheGraphRecorder recorder(&kythe_output);
 
     kythe::FileVNameGenerator file_vnames;
-    kythe::lang_textproto::TextProtoAnalyzer analyzer(
+    kythe::lang_textproto::AnalyzeCompilationUnit(
         &unit, &files, FLAGS_message_name, &file_vnames, &recorder);
-    analyzer.Analyze();
   }
 
   CHECK(::close(write_fd) == 0) << "Error closing output file";
