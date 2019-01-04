@@ -10,8 +10,13 @@ message Message1 {
 message MyMessage {
     //- @field1 defines/binding Field1?
     string field1 = 1;
+
+    //- @field2 defines/binding Field2
     int32 field2 = 2;
 
+    //- @bool_field defines/binding BoolField?
+    bool bool_field = 3;
+
     //- @msg1 defines/binding Msg1?
-    Message1 msg1 = 3;
+    Message1 msg1 = 4;
 }

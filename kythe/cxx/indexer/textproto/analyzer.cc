@@ -191,13 +191,13 @@ void TextProtoAnalyzer::Analyze() {
 
   const google::protobuf::Reflection* reflection = proto->GetReflection();
 
-  std::vector<const FieldDescriptor*> fieldsThatAreSet;
-  // access to fields/extensions unknown to the parser.
-  // TODO: don't use ListFields() - it won't work with proto3 since protos don't
-  // have HasBits()
-  reflection->ListFields(*proto, &fieldsThatAreSet);
-
-  for (auto& field : fieldsThatAreSet) {
+  // Iterate across all fields in the message. For proto1 and 2, each field has
+  // a bit that tracks whether or not each field was set. This could be used to
+  // only look at fields we know are set (with reflection.ListFields()). Proto3
+  // however does not have "has" bits, so this approach would not work, thus we
+  // look at every field.
+  for (int i = 0; i < msgType->field_count(); i++) {
+    const FieldDescriptor* field = msgType->field(i);
     LOG(ERROR) << "Looking for field: " << field->DebugString();
 
     // TODO: recursively handle message types
