@@ -2,8 +2,15 @@ syntax = "proto3";
 
 package example;
 
+message Message1 {
+    string str_field = 1;
+}
+
 message MyMessage {
     //- @field1 defines/binding ProtoField1?
     string field1 = 1;
     int32 field2 = 2;
+
+    //- @msg1 defines/binding Msg1Field?
+    Message1 msg1 = 3;
 }
