@@ -1,3 +1,0 @@
-has_compile_errors: false
-argument: "-I/usr/lib/include"
-source_file: "my/file.cc"
