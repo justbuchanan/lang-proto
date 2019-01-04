@@ -1,8 +1,29 @@
 load(":textproto_indexer_test.bzl", "textproto_indexer_test")
 
 textproto_indexer_test(
-    name = "test_example_bz",
+    name = "basics_test",
     message_name = "example.MyMessage",
     protos = ["example.proto"],
     textproto = "example.pbtxt",
+)
+
+textproto_indexer_test(
+    name = "nested_message_test",
+    message_name = "example.MyMessage",
+    protos = ["example.proto"],
+    textproto = "nested_message.pbtxt",
+)
+
+textproto_indexer_test(
+    name = "repeated_field_test",
+    message_name = "example.MyMessage",
+    protos = ["example.proto"],
+    textproto = "repeated_field.pbtxt",
+)
+
+textproto_indexer_test(
+    name = "default_value_test",
+    message_name = "example.MyMessage",
+    protos = ["example.proto"],
+    textproto = "default_value.pbtxt",
 )

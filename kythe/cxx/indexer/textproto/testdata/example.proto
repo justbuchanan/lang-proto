@@ -3,7 +3,7 @@ syntax = "proto3";
 package example;
 
 message Message1 {
-    //- @str_field defines/binding Msg1StrField
+    //- @str_field defines/binding Msg1StrField?
     string str_field = 1;
 }
 
@@ -11,7 +11,7 @@ message MyMessage {
     //- @field1 defines/binding Field1?
     string field1 = 1;
 
-    //- @field2 defines/binding Field2
+    //- @field2 defines/binding Field2?
     int32 field2 = 2;
 
     //- @bool_field defines/binding BoolField?

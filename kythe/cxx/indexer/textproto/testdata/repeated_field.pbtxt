@@ -1,0 +1,5 @@
+#- @repeated_field ref RepeatedField
+repeated_field: "first"
+
+#- @repeated_field ref RepeatedField
+repeated_field: "second"
