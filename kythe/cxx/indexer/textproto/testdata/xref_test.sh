@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 VERIFIER_BIN="external/io_kythe/kythe/cxx/verifier/verifier"
 PB_INDEXER_BIN="kythe/cxx/indexer/proto/indexer"
@@ -25,5 +25,4 @@ $PBTXT_INDEXER_BIN \
 cat "$PB_ENTRIES" "$PBTXT_ENTRIES" | \
     "$VERIFIER_BIN" $EXAMPLE_PBTXT $EXAMPLE_PBTXT \
     --show_goals \
-    --show_protos \
     --goal_regex="\s*(?:#|(?://))\-(.*)" 
