@@ -70,7 +70,7 @@ class TextProtoAnalyzer {
                     KytheGraphRecorder* recorder)
       : compilation_unit_(unit),
         files_(file_data),
-        msg_type_name_(message_name),
+        message_name_(message_name),
         file_vnames_(file_vnames),
         recorder_(recorder) {}
 
@@ -80,7 +80,7 @@ class TextProtoAnalyzer {
   void AnalyzeMessage(
       const proto::VName& file_vname, const google::protobuf::Message* proto,
       const google::protobuf::Descriptor* descriptor,
-      const google::protobuf::TextFormat::ParseInfoTree* infoTree);
+      const google::protobuf::TextFormat::ParseInfoTree* parse_tree);
 
   void AddNode(const proto::VName& node_name, NodeKindID node_kind);
   proto::VName CreateAndAddAnchorNode(
@@ -92,7 +92,7 @@ class TextProtoAnalyzer {
 
   const proto::CompilationUnit* compilation_unit_;
   const std::vector<proto::FileData>* files_;
-  const std::string msg_type_name_;
+  const std::string message_name_;
 
   // A generator for consistently mapping file paths to VNames.
   const FileVNameGenerator* file_vnames_;
@@ -150,7 +150,6 @@ void TextProtoAnalyzer::Analyze() {
 
   CHECK(compilation_unit_->source_file().size() == 1)
       << "Expected CU to contain 1 source file";
-
   CHECK(files_->size() >= 2)
       << "Must provide at least 2 files: a textproto and 1+ .proto files";
 
@@ -160,20 +159,14 @@ void TextProtoAnalyzer::Analyze() {
   VName file_vname = VNameFromFullPath(pbtxt_name);
   recorder_->AddProperty(VNameRef(file_vname), NodeKindID::kFile);
 
-  absl::node_hash_map<std::string, std::string> file_substitution_cache;
   // TODO
+  absl::node_hash_map<std::string, std::string> file_substitution_cache;
   auto path_substitutions = ParsePathSubstitutions(*compilation_unit_);
-  // ProtoFileReader file_reader(&path_substitutions, &file_substitution_cache);
-  // google::protobuf::util::ProtoFileParser proto_parser(&file_reader);
 
+  // Load all proto files into in-memory SourceTree.
   PreloadedProtoFileTree file_reader(&path_substitutions,
                                      &file_substitution_cache);
-  LoggingMultiFileErrorCollector error_collector;
-  google::protobuf::compiler::Importer proto_importer(&file_reader,
-                                                      &error_collector);
-
   std::vector<std::string> proto_filenames;
-
   const proto::FileData* pbtxt_file_data = nullptr;
   for (const auto& file_data : *files_) {
     // the textproto file is in the list, but we skip over it because it doesn't
@@ -188,50 +181,48 @@ void TextProtoAnalyzer::Analyze() {
 
     proto_filenames.push_back(file_data.info().path());
   }
+  CHECK(pbtxt_file_data != nullptr)
+      << "Couldn't find textproto source in file data";
 
   // Build protodb/pool
+  LoggingMultiFileErrorCollector error_collector;
+  google::protobuf::compiler::Importer proto_importer(&file_reader,
+                                                      &error_collector);
   for (const std::string& fname : proto_filenames) {
     LOG(ERROR) << "importing into db/pool: " << fname;
     CHECK(proto_importer.Import(fname))
         << "Error importing proto file: " << fname;
   }
-
-  CHECK(pbtxt_file_data != nullptr)
-      << "Couldn't find textproto source in file data";
+  const google::protobuf::DescriptorPool* descriptor_pool =
+      proto_importer.pool();
 
   // record source text as a fact
   recorder_->AddProperty(VNameRef(file_vname), PropertyID::kText,
                          pbtxt_file_data->content());
-
-  line_index_ = absl::make_unique<UTF8LineIndex>(pbtxt_file_data->content());
-
-  const google::protobuf::DescriptorPool* descriptor_pool =
-      proto_importer.pool();
 
   google::protobuf::TextFormat::Parser parser;
   // relax parser restrictions - even if the proto is partially ill-defined,
   // we'd like to analyze the parts that are good.
   parser.AllowPartialMessage(true);
   parser.AllowUnknownExtension(true);
-
   // record symbol locations
-  google::protobuf::TextFormat::ParseInfoTree infoTree;
-  parser.WriteLocationsTo(&infoTree);
+  google::protobuf::TextFormat::ParseInfoTree parse_tree;
+  parser.WriteLocationsTo(&parse_tree);
 
   const google::protobuf::Descriptor* descriptor =
-      descriptor_pool->FindMessageTypeByName(msg_type_name_);
-  LOG(ERROR) << "msg type name: " << msg_type_name_;
+      descriptor_pool->FindMessageTypeByName(message_name_);
+  LOG(ERROR) << "msg type name: " << message_name_;
   CHECK(descriptor != nullptr) << "Unable to find proto in descriptor pool";
 
   google::protobuf::DynamicMessageFactory msg_factory;
   std::unique_ptr<google::protobuf::Message> proto(
       msg_factory.GetPrototype(descriptor)->New());
-  if (!parser.ParseFromString(pbtxt_file_data->content(), proto.get())) {
-    LOG(FATAL) << "Failed to parse text proto";
-  }
-  LOG(ERROR) << "parsed: \n" << proto->DebugString();
+  CHECK(parser.ParseFromString(pbtxt_file_data->content(), proto.get()))
+      << "Failed to parse text proto";
 
-  AnalyzeMessage(file_vname, proto.get(), descriptor, &infoTree);
+  line_index_ = absl::make_unique<UTF8LineIndex>(pbtxt_file_data->content());
+
+  AnalyzeMessage(file_vname, proto.get(), descriptor, &parse_tree);
 }
 
 // TODO: handle extensions / message sets
@@ -239,7 +230,7 @@ void TextProtoAnalyzer::Analyze() {
 void TextProtoAnalyzer::AnalyzeMessage(
     const proto::VName& file_vname, const google::protobuf::Message* proto,
     const google::protobuf::Descriptor* descriptor,
-    const google::protobuf::TextFormat::ParseInfoTree* infoTree) {
+    const google::protobuf::TextFormat::ParseInfoTree* parse_tree) {
   const google::protobuf::Reflection* reflection = proto->GetReflection();
 
   // Iterate across all fields in the message. For proto1 and 2, each field has
@@ -253,7 +244,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
 
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =
-          infoTree->GetLocation(field, -1 /* non-repeated */);
+          parse_tree->GetLocation(field, -1 /* non-repeated */);
 
       if (loc.line == -1) {
         LOG(ERROR) << "  Not found";
@@ -277,7 +268,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
       // Handle submessage
       if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
         google::protobuf::TextFormat::ParseInfoTree* subtree =
-            infoTree->GetTreeForNested(field, -1);
+            parse_tree->GetTreeForNested(field, -1);
         const google::protobuf::Message& submessage =
             reflection->GetMessage(*proto, field);
         const google::protobuf::Descriptor* subdescriptor =
@@ -300,7 +291,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
       // Add a ref for each instance of the repeated field.
       for (int i = 0; i < count; i++) {
         google::protobuf::TextFormat::ParseLocation loc =
-            infoTree->GetLocation(field, i);
+            parse_tree->GetLocation(field, i);
 
         // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
         // 1-indexed line numbers.
@@ -317,7 +308,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
         // Handle submessage
         if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
           google::protobuf::TextFormat::ParseInfoTree* subtree =
-              infoTree->GetTreeForNested(field, i);
+              parse_tree->GetTreeForNested(field, i);
           const google::protobuf::Message& submessage =
               reflection->GetRepeatedMessage(*proto, field, i);
           const google::protobuf::Descriptor* subdescriptor =
