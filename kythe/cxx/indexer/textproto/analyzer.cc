@@ -82,12 +82,6 @@ class TextProtoAnalyzer {
       const google::protobuf::Descriptor* descriptor,
       const google::protobuf::TextFormat::ParseInfoTree* infoTree);
 
-  // void ProcessField(const proto::VName& file_vname,
-  //                   const proto::VName& field_vname,
-  //                   const google::protobuf::FieldDescriptor* field,
-  //                   const google::protobuf::TextFormat::ParseInfoTree*
-  //                   infoTree, int i);
-
   void AddNode(const proto::VName& node_name, NodeKindID node_kind);
   proto::VName CreateAndAddAnchorNode(
       const proto::VName& file, const google::protobuf::FieldDescriptor* field,
@@ -160,11 +154,10 @@ void TextProtoAnalyzer::Analyze() {
   CHECK(files_->size() >= 2)
       << "Must provide at least 2 files: a textproto and 1+ .proto files";
 
-  std::string pbtxt_name =
-      compilation_unit_->source_file(0);  // TODO: string_view
+  std::string pbtxt_name = compilation_unit_->source_file(0);
 
   // file node
-  VName file_vname = VNameFromFullPath(pbtxt_name);  // TODO: real vname
+  VName file_vname = VNameFromFullPath(pbtxt_name);
   recorder_->AddProperty(VNameRef(file_vname), NodeKindID::kFile);
 
   absl::node_hash_map<std::string, std::string> file_substitution_cache;
@@ -225,23 +218,24 @@ void TextProtoAnalyzer::Analyze() {
   google::protobuf::TextFormat::ParseInfoTree infoTree;
   parser.WriteLocationsTo(&infoTree);
 
-  const google::protobuf::Descriptor* msgType =
+  const google::protobuf::Descriptor* descriptor =
       descriptor_pool->FindMessageTypeByName(msg_type_name_);
   LOG(ERROR) << "msg type name: " << msg_type_name_;
-  CHECK(msgType != nullptr) << "Unable to find proto in descriptor pool";
-  // LOG(ERROR) << "descriptor: " << msgType->DebugString();
+  CHECK(descriptor != nullptr) << "Unable to find proto in descriptor pool";
 
   google::protobuf::DynamicMessageFactory msg_factory;
   std::unique_ptr<google::protobuf::Message> proto(
-      msg_factory.GetPrototype(msgType)->New());
+      msg_factory.GetPrototype(descriptor)->New());
   if (!parser.ParseFromString(pbtxt_file_data->content(), proto.get())) {
     LOG(FATAL) << "Failed to parse text proto";
   }
   LOG(ERROR) << "parsed: \n" << proto->DebugString();
 
-  AnalyzeMessage(file_vname, proto.get(), msgType, &infoTree);
+  AnalyzeMessage(file_vname, proto.get(), descriptor, &infoTree);
 }
 
+// TODO: handle extensions / message sets
+// TODO: handle comments?
 void TextProtoAnalyzer::AnalyzeMessage(
     const proto::VName& file_vname, const google::protobuf::Message* proto,
     const google::protobuf::Descriptor* descriptor,
@@ -257,59 +251,60 @@ void TextProtoAnalyzer::AnalyzeMessage(
     const FieldDescriptor* field = descriptor->field(i);
     LOG(ERROR) << "Looking for field: " << field->DebugString();
 
-    // TODO: recursively handle message types
-    // TODO: handle extensions / message sets
-    // TODO: handle comments?
-
-    VName field_vname = VNameForDescriptor(
-        field,
-        [this](const std::string& path) { return VNameFromRelPath(path); });
-
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =
           infoTree->GetLocation(field, -1 /* non-repeated */);
 
       if (loc.line == -1) {
         LOG(ERROR) << "  Not found";
-      } else {
-        // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
-        // 1-indexed values
-        loc.line++;
-        // loc.column++; // UTF8LineIndex uses 0-based columns
+        continue;
+      }
 
-        LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
-        VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
+      // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
+      // 1-indexed line numbers.
+      loc.line++;
 
-        // add ref to proto field
-        recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
-                           VNameRef(field_vname));
+      LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
+      VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
 
-        // Handle submessage
-        if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
-          google::protobuf::TextFormat::ParseInfoTree* subtree =
-              infoTree->GetTreeForNested(field, -1);
-          const google::protobuf::Message& submessage = reflection->GetMessage(
-              *proto, field, /*message_factory=*/nullptr);
-          const google::protobuf::Descriptor* subdescriptor =
-              field->message_type();
-          AnalyzeMessage(file_vname, &submessage, subdescriptor, subtree);
-        }
+      // add ref to proto field
+      VName field_vname = VNameForDescriptor(
+          field,
+          [this](const std::string& path) { return VNameFromRelPath(path); });
+      recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
+                         VNameRef(field_vname));
+
+      // Handle submessage
+      if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+        google::protobuf::TextFormat::ParseInfoTree* subtree =
+            infoTree->GetTreeForNested(field, -1);
+        const google::protobuf::Message& submessage =
+            reflection->GetMessage(*proto, field);
+        const google::protobuf::Descriptor* subdescriptor =
+            field->message_type();
+        AnalyzeMessage(file_vname, &submessage, subdescriptor, subtree);
       }
     } else {
       // repeated
       int count = reflection->FieldSize(*proto, field);
       LOG(ERROR) << "  repeated field count " << count;
 
-      for (int i = 0; i < count; i++) {
-        // ProcessField(file_vname, field_vname, field, infoTree, i);
+      if (count == 0) {
+        continue;
+      }
 
+      VName field_vname = VNameForDescriptor(
+          field,
+          [this](const std::string& path) { return VNameFromRelPath(path); });
+
+      // Add a ref for each instance of the repeated field.
+      for (int i = 0; i < count; i++) {
         google::protobuf::TextFormat::ParseLocation loc =
             infoTree->GetLocation(field, i);
 
         // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
-        // 1-indexed values
+        // 1-indexed line numbers.
         loc.line++;
-        // loc.column++; // UTF8LineIndex uses 0-based columns
 
         CHECK(loc.line != -1) << "  Not found this should never happen";
         LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
@@ -333,27 +328,6 @@ void TextProtoAnalyzer::AnalyzeMessage(
     }
   }
 }
-
-// void TextProtoAnalyzer::ProcessField(
-//     const proto::VName& file_vname, const proto::VName& field_vname,
-//     const google::protobuf::FieldDescriptor* field,
-//     const google::protobuf::TextFormat::ParseInfoTree* infoTree, int i) {
-//   google::protobuf::TextFormat::ParseLocation loc =
-//       infoTree->GetLocation(field, i);
-
-//   // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
-//   // 1-indexed values
-//   loc.line++;
-//   // loc.column++; // UTF8LineIndex uses 0-based columns
-
-//   CHECK(loc.line != -1) << "  Not found this should never happen";
-//   LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
-//   VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
-
-//   // add ref to proto field
-//   recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
-//                      VNameRef(field_vname));
-// }
 
 void AnalyzeCompilationUnit(const proto::CompilationUnit& unit,
                             const std::vector<proto::FileData>& file_data,
