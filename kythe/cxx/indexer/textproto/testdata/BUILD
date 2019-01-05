@@ -27,3 +27,13 @@ textproto_indexer_test(
     protos = ["example.proto"],
     textproto = "default_value.pbtxt",
 )
+
+textproto_indexer_test(
+    name = "with_imports_test",
+    message_name = "example2.OuterMessage",
+    protos = [
+        "example.proto",
+        "proto_with_imports.proto",
+    ],
+    textproto = "with_imports.pbtxt",
+)

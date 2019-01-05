@@ -1,0 +1,7 @@
+# example2.OuterMessage
+
+#- @inner_msg ref OuterMessageInnerMsg
+inner_msg {
+    #- @field1 ref Field1
+    field1: "hello"
+}

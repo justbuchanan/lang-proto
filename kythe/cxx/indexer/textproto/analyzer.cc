@@ -3,16 +3,19 @@
 #include <fcntl.h>
 #include <iostream>
 #include <memory>
-
 #include "absl/container/node_hash_map.h"
 #include "absl/strings/str_cat.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/descriptor_database.h"
 #include "google/protobuf/dynamic_message.h"
+#include "google/protobuf/io/printer.h"
 #include "google/protobuf/text_format.h"
 #include "kythe/cxx/common/indexing/KytheCachingOutput.h"
 #include "kythe/cxx/common/indexing/KytheGraphRecorder.h"
+#include "kythe/cxx/common/protobuf_metadata_file.h"
+#include "kythe/cxx/common/utf8_line_index.h"
 #include "kythe/cxx/indexer/proto/indexer_frontend.h"
+#include "kythe/cxx/indexer/proto/relative_paths.h"
 #include "kythe/cxx/indexer/proto/source_tree.h"
 #include "kythe/proto/analysis.pb.h"
 
@@ -33,10 +36,10 @@ std::string StringifyKind(NodeKindID kind) {
   return std::string(spelling_of(kind));
 }
 
-// Pretty-prints an EdgeKindID.
-std::string StringifyKind(EdgeKindID kind) {
-  return std::string(spelling_of(kind));
-}
+// // Pretty-prints an EdgeKindID.
+// std::string StringifyKind(EdgeKindID kind) {
+//   return std::string(spelling_of(kind));
+// }
 
 class LoggingMultiFileErrorCollector
     : public google::protobuf::compiler::MultiFileErrorCollector {
@@ -204,10 +207,9 @@ void TextProtoAnalyzer::Analyze() {
   VName file_vname = VNameFromFullPath(pbtxt_name);  // TODO: real vname
   recorder_->AddProperty(VNameRef(file_vname), NodeKindID::kFile);
 
-  std::vector<std::pair<std::string, std::string>> path_substitutions;
   absl::node_hash_map<std::string, std::string> file_substitution_cache;
   // TODO
-  // ParsePathSubstitutions(unit, &path_substitutions);
+  auto path_substitutions = ParsePathSubstitutions(*compilation_unit_);
   // ProtoFileReader file_reader(&path_substitutions, &file_substitution_cache);
   // google::protobuf::util::ProtoFileParser proto_parser(&file_reader);
 
