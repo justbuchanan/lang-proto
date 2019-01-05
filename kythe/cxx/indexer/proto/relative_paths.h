@@ -25,10 +25,8 @@ namespace proto {
 class CompilationUnit;
 }  // namespace proto
 
-void ParsePathSubstitutions(
-    const proto::CompilationUnit& unit,
-    std::vector<std::pair<std::string, std::string>>* substitutions);
-
+std::vector<std::pair<std::string, std::string>> ParsePathSubstitutions(
+    const proto::CompilationUnit& unit);
 
 }
 

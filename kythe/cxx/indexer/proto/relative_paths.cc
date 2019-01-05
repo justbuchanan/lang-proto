@@ -28,33 +28,36 @@ void AddPathSubstitutions(
 }
 
 
-void ParsePathSubstitutions(
-    const proto::CompilationUnit& unit,
-    std::vector<std::pair<std::string, std::string>>* substitutions) {
+std::vector<std::pair<std::string, std::string>> ParsePathSubstitutions(
+    const proto::CompilationUnit& unit
+    ) {
+  std::vector<std::pair<std::string, std::string>> substitutions;
+
   bool have_paths = false;
   bool expecting_path_arg = false;
   for (const std::string& argument : unit.argument()) {
     if (expecting_path_arg) {
       expecting_path_arg = false;
-      AddPathSubstitutions(argument, substitutions);
+      AddPathSubstitutions(argument, &substitutions);
       have_paths = true;
     } else if (argument == "-I" || argument == "--proto_path") {
       expecting_path_arg = true;
     } else {
       absl::string_view argument_value = argument;
       if (absl::ConsumePrefix(&argument_value, "-I")) {
-        AddPathSubstitutions(argument_value, substitutions);
+        AddPathSubstitutions(argument_value, &substitutions);
         have_paths = true;
       } else if (absl::ConsumePrefix(&argument_value, "--proto_path=")) {
-        AddPathSubstitutions(argument_value, substitutions);
+        AddPathSubstitutions(argument_value, &substitutions);
         have_paths = true;
       }
     }
   }
   if (!have_paths && !unit.working_directory().empty()) {
-    substitutions->push_back(
+    substitutions.push_back(
         std::make_pair("", CleanPath(unit.working_directory())));
   }
+  return substitutions;
 }
 
 }
