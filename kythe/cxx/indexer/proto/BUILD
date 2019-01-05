@@ -91,6 +91,9 @@ cc_library(
 cc_library(
     name = "vname",
     hdrs = ["vname.h"],
+    visibility = [
+        "//kythe/cxx/indexer/textproto:__pkg__",
+    ],
     deps = [
         "@com_google_protobuf//:protobuf",
     ],

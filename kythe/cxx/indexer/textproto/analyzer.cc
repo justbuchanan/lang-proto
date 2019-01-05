@@ -17,6 +17,7 @@
 #include "kythe/cxx/indexer/proto/indexer_frontend.h"
 #include "kythe/cxx/indexer/proto/relative_paths.h"
 #include "kythe/cxx/indexer/proto/source_tree.h"
+#include "kythe/cxx/indexer/proto/vname.h"
 #include "kythe/proto/analysis.pb.h"
 
 namespace kythe {
@@ -91,47 +92,6 @@ class TextProtoAnalyzer {
   proto::VName CreateAndAddAnchorNode(
       const proto::VName& file, const google::protobuf::FieldDescriptor* field,
       google::protobuf::TextFormat::ParseLocation loc);
-
-  // copied from proto_graph_builder.h
-  // Returns a VName for the given protobuf descriptor. Descriptors share
-  // various member names but do not participate in any sort of inheritance
-  // hierarchy, so we're stuck with a template.
-  template <typename SomeDescriptor>
-  proto::VName VNameForDescriptor(const SomeDescriptor* descriptor) {
-    class PathSink : public ::google::protobuf::io::AnnotationCollector {
-     public:
-      PathSink(const std::function<proto::VName(const std::string&)>&
-                   vname_for_rel_path,
-               proto::VName* vname)
-          : vname_for_rel_path_(vname_for_rel_path), vname_(vname) {}
-
-      void AddAnnotation(size_t begin_offset, size_t end_offset,
-                         const std::string& file_path,
-                         const std::vector<int>& path) override {
-        *vname_ = VNameForProtoPath(vname_for_rel_path_(file_path), path);
-      }
-
-     private:
-      const std::function<proto::VName(const std::string&)>&
-          vname_for_rel_path_;
-      proto::VName* vname_;
-    };
-
-    proto::VName vname;
-    std::function<proto::VName(const std::string&)> vname_for_rel_path =
-        [this](const std::string& path) { return VNameFromRelPath(path); };
-    PathSink path_sink(vname_for_rel_path, &vname);
-    // We'd really like to use GetLocationPath here, but it's private, so
-    // we have to go through some contortions. On the plus side, this is the
-    // *exact* same code that protoc backends use for writing out annotations,
-    // so if AddAnnotation ever changes we'll know.
-    std::string s;
-    ::google::protobuf::io::StringOutputStream stream(&s);
-    ::google::protobuf::io::Printer printer(&stream, '$', &path_sink);
-    printer.Print("$0$", "0", "0");
-    printer.Annotate("0", descriptor);
-    return vname;
-  }
 
   proto::VName VNameFromFullPath(const std::string& path);
   proto::VName VNameFromRelPath(const std::string& simplified_path);
@@ -301,7 +261,9 @@ void TextProtoAnalyzer::AnalyzeMessage(
     // TODO: handle extensions / message sets
     // TODO: handle comments?
 
-    VName field_vname = VNameForDescriptor(field);
+    VName field_vname = VNameForDescriptor(
+        field,
+        [this](const std::string& path) { return VNameFromRelPath(path); });
 
     if (!field->is_repeated()) {
       google::protobuf::TextFormat::ParseLocation loc =

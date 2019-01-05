@@ -18,6 +18,7 @@ cc_library(
     hdrs = ["analyzer.h"],
     deps = [
         "//kythe/cxx/indexer/proto:proto_analyzer",
+        "//kythe/cxx/indexer/proto:vname",
         "@com_google_absl//absl/container:node_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",
