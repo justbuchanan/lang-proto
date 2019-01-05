@@ -105,7 +105,7 @@ Examples:
 
     kythe::FileVNameGenerator file_vnames;
     kythe::lang_textproto::AnalyzeCompilationUnit(
-        &unit, &files, FLAGS_message_name, &file_vnames, &recorder);
+        unit, files, FLAGS_message_name, file_vnames, &recorder);
   }
 
   CHECK(::close(write_fd) == 0) << "Error closing output file";

@@ -391,12 +391,12 @@ void TextProtoAnalyzer::AnalyzeMessage(
 //                      VNameRef(field_vname));
 // }
 
-void AnalyzeCompilationUnit(const proto::CompilationUnit* unit,
-                            const std::vector<proto::FileData>* file_data,
+void AnalyzeCompilationUnit(const proto::CompilationUnit& unit,
+                            const std::vector<proto::FileData>& file_data,
                             std::string message_name,
-                            const FileVNameGenerator* file_vnames,
+                            const FileVNameGenerator& file_vnames,
                             KytheGraphRecorder* recorder) {
-  TextProtoAnalyzer analyzer(unit, file_data, message_name, file_vnames,
+  TextProtoAnalyzer analyzer(&unit, &file_data, message_name, &file_vnames,
                              recorder);
   analyzer.Analyze();
 }

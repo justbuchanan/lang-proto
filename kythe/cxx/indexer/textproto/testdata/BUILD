@@ -4,7 +4,7 @@ textproto_indexer_test(
     name = "basics_test",
     message_name = "example.MyMessage",
     protos = ["example.proto"],
-    textproto = "example.pbtxt",
+    textproto = "basics.pbtxt",
 )
 
 textproto_indexer_test(
