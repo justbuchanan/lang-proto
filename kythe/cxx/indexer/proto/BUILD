@@ -89,6 +89,14 @@ cc_library(
 )
 
 cc_library(
+    name = "vname",
+    hdrs = ["vname.h"],
+    deps = [
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
     name = "source_tree",
     srcs = ["source_tree.cc"],
     hdrs = ["source_tree.h"],

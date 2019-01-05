@@ -28,6 +28,6 @@ class CompilationUnit;
 std::vector<std::pair<std::string, std::string>> ParsePathSubstitutions(
     const proto::CompilationUnit& unit);
 
-}
+}  // namespace kythe
 
-#endif // KYTHE_CXX_INDEXER_PROTO_RELATIVE_PATHS_H_
+#endif  // KYTHE_CXX_INDEXER_PROTO_RELATIVE_PATHS_H_

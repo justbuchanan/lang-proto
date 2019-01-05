@@ -17,7 +17,6 @@
 #include "kythe/cxx/indexer/proto/indexer_frontend.h"
 
 #include "absl/container/node_hash_map.h"
-#include "kythe/cxx/indexer/proto/relative_paths.h"
 #include "kythe/cxx/common/file_vname_generator.h"
 #include "kythe/cxx/common/indexing/KytheGraphRecorder.h"
 #include "kythe/cxx/indexer/proto/proto_analyzer.h"

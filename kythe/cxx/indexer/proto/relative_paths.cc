@@ -1,9 +1,9 @@
 #include "relative_paths.h"
 
-#include "kythe/cxx/common/path_utils.h"
-#include "kythe/proto/analysis.pb.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"
+#include "kythe/cxx/common/path_utils.h"
+#include "kythe/proto/analysis.pb.h"
 
 namespace kythe {
 
@@ -25,12 +25,10 @@ void AddPathSubstitutions(
     }
   }
 }
-}
-
+}  // namespace
 
 std::vector<std::pair<std::string, std::string>> ParsePathSubstitutions(
-    const proto::CompilationUnit& unit
-    ) {
+    const proto::CompilationUnit& unit) {
   std::vector<std::pair<std::string, std::string>> substitutions;
 
   bool have_paths = false;
@@ -60,4 +58,4 @@ std::vector<std::pair<std::string, std::string>> ParsePathSubstitutions(
   return substitutions;
 }
 
-}
+}  // namespace kythe
