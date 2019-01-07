@@ -113,8 +113,18 @@ VName TextProtoAnalyzer::CreateAndAddAnchorNode(
   VName anchor = file;
   anchor.set_language(kLanguageName);
 
-  const int begin = line_index_->ComputeByteOffset(loc.line, loc.column);
-  const int end = begin + field->name().size();
+  size_t len =
+      field->is_extension() ? field->full_name().size() : field->name().size();
+
+  int begin = line_index_->ComputeByteOffset(loc.line, loc.column);
+
+  if (field->is_extension()) {
+    begin += 1;  // Skip leading "[" for extension
+  }
+
+  const int end = begin + len;
+
+  // LOG(ERROR) << "FIELD FULL NAME: " << field
 
   auto* const signature = anchor.mutable_signature();
   absl::StrAppend(signature, "@", begin, ":", end);
@@ -225,7 +235,6 @@ void TextProtoAnalyzer::Analyze() {
   AnalyzeMessage(file_vname, proto.get(), descriptor, &parse_tree);
 }
 
-// TODO: handle extensions / message sets
 // TODO: handle comments?
 void TextProtoAnalyzer::AnalyzeMessage(
     const proto::VName& file_vname, const google::protobuf::Message* proto,
@@ -319,54 +328,55 @@ void TextProtoAnalyzer::AnalyzeMessage(
     }
   }
 
-
   // Extensions
 
   std::vector<const FieldDescriptor*> set_fields;
-  reflection->ListFields(
-    *proto,
-    &set_fields);
-  for (const FieldDescriptor*field : set_fields) {
+  reflection->ListFields(*proto, &set_fields);
+  for (const FieldDescriptor* field : set_fields) {
     // non-extensions are already handled above
     if (!field->is_extension()) {
       continue;
     }
 
     LOG(ERROR) << "Found set extension: " << field->DebugString();
+    LOG(ERROR) << "  extension name: " << field->name();
+    LOG(ERROR) << "  extension fullname: " << field->full_name();
 
-       google::protobuf::TextFormat::ParseLocation loc =
-          parse_tree->GetLocation(field, -1 /* non-repeated */);
+    google::protobuf::TextFormat::ParseLocation loc =
+        parse_tree->GetLocation(field, -1 /* non-repeated */);
 
-       CHECK(loc.line != -1) << "Field is set, but can't find location";
+    CHECK(loc.line != -1)
+        << "Field is set, but can't find location. This should never happen";
 
-      // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
-      // 1-indexed line numbers.
-      loc.line++;
+    // GetLocation() returns 0-indexed values, but UTF8LineIndex expects
+    // 1-indexed line numbers.
+    loc.line++;
 
-      LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
-      VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
+    absl::string_view substr = line_index_->GetSubstrFromLine(
+        loc.line, loc.column, field->full_name().size());
+    LOG(ERROR) << "TEXT OF FIELD: " << substr;
 
-      // add ref to proto field
-      VName field_vname = ::kythe::lang_proto::VNameForDescriptor(
-          field,
-          [this](const std::string& path) { return VNameFromRelPath(path); });
-      recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
-                         VNameRef(field_vname));
+    LOG(ERROR) << "  line " << loc.line << ", col: " << loc.column;
+    VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
 
-      // Handle submessage
-      if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
-        google::protobuf::TextFormat::ParseInfoTree* subtree =
-            parse_tree->GetTreeForNested(field, -1 /*non-repeated */);
-        const google::protobuf::Message& submessage =
-            reflection->GetMessage(*proto, field);
-        const google::protobuf::Descriptor* subdescriptor =
-            field->message_type();
-        AnalyzeMessage(file_vname, &submessage, subdescriptor, subtree);
-      }
+    // add ref to proto field
+    VName field_vname = ::kythe::lang_proto::VNameForDescriptor(
+        field,
+        [this](const std::string& path) { return VNameFromRelPath(path); });
+    recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
+                       VNameRef(field_vname));
 
+    // Handle submessage
+    if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
+      google::protobuf::TextFormat::ParseInfoTree* subtree =
+          parse_tree->GetTreeForNested(field, -1 /*non-repeated */);
+      const google::protobuf::Message& submessage =
+          reflection->GetMessage(*proto, field);
+      const google::protobuf::Descriptor* subdescriptor = field->message_type();
+      AnalyzeMessage(file_vname, &submessage, subdescriptor, subtree);
+    }
   }
   // CHECK(false);
-
 }
 
 void AnalyzeCompilationUnit(const proto::CompilationUnit& unit,
