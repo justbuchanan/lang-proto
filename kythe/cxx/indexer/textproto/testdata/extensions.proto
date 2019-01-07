@@ -15,5 +15,6 @@ message MyExtension {
         optional MyExtension ext = 5000;
     }
 
+    //- @field1 defines/binding MyExtensionField1?
     optional string field1 = 1;
 }
