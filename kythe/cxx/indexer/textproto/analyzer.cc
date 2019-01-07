@@ -204,7 +204,7 @@ void TextProtoAnalyzer::Analyze() {
   // relax parser restrictions - even if the proto is partially ill-defined,
   // we'd like to analyze the parts that are good.
   parser.AllowPartialMessage(true);
-  parser.AllowUnknownExtension(true);
+  // parser.AllowUnknownExtension(true); // TODO: uncomment this
   // record symbol locations
   google::protobuf::TextFormat::ParseInfoTree parse_tree;
   parser.WriteLocationsTo(&parse_tree);

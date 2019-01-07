@@ -37,3 +37,10 @@ textproto_indexer_test(
     ],
     textproto = "with_imports.pbtxt",
 )
+
+textproto_indexer_test(
+    name = "message_sets_test",
+    message_name = "mypkg.ExtendableMessage",
+    protos = ["extensions.proto"],
+    textproto = "with_extensions.pbtxt",
+)

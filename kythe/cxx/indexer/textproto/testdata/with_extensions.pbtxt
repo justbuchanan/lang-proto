@@ -1,0 +1,7 @@
+#- @str_field1 ref ExtendableMessageStrField1
+str_field1: "hello"
+
+# @"mypkg.MyExtension.ext" ref Ext
+[mypkg.MyExtension.ext] {
+    field1: "hello"
+}
