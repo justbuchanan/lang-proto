@@ -2,7 +2,6 @@ syntax = "proto2";
 
 package example2;
 
-// import "example.proto";
 import "kythe/cxx/indexer/textproto/testdata/example.proto";
 
 message OuterMessage {
