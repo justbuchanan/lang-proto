@@ -18,6 +18,7 @@
 #define KYTHE_CXX_INDEXER_PROTO_VNAME_H_
 
 namespace kythe {
+namespace lang_proto {
 
 // Returns a VName for the given protobuf descriptor. Descriptors share
 // various member names but do not participate in any sort of inheritance
@@ -56,6 +57,7 @@ proto::VName VNameForDescriptor(
   return vname;
 }
 
+}  // namespace lang_proto
 }  // namespace kythe
 
 #endif  // KYTHE_CXX_INDEXER_PROTO_VNAME_H_

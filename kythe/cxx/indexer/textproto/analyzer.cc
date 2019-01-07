@@ -259,7 +259,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
       VName anchor_vname = CreateAndAddAnchorNode(file_vname, field, loc);
 
       // add ref to proto field
-      VName field_vname = VNameForDescriptor(
+      VName field_vname = ::kythe::lang_proto::VNameForDescriptor(
           field,
           [this](const std::string& path) { return VNameFromRelPath(path); });
       recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
@@ -284,7 +284,7 @@ void TextProtoAnalyzer::AnalyzeMessage(
         continue;
       }
 
-      VName field_vname = VNameForDescriptor(
+      VName field_vname = ::kythe::lang_proto::VNameForDescriptor(
           field,
           [this](const std::string& path) { return VNameFromRelPath(path); });
 
