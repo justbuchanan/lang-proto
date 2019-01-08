@@ -38,16 +38,18 @@ verifier_test = rule(
 )
 
 def _index(ctx):
+    args = ctx.attr.extra_args + [
+        "-o",
+        ctx.outputs.facts.path,
+    ] + [p.path for p in ctx.files.files]
+    if ctx.files.textproto:
+        args += ["--text_proto_file", ctx.files.textproto[0].path]
+
     ctx.actions.run(
         outputs = [ctx.outputs.facts],
         inputs = ctx.files.files + ctx.files.textproto,
         executable = ctx.executable.indexer_bin,
-        arguments = ctx.attr.extra_args + [
-            "-o",
-            ctx.outputs.facts.path,
-            "--text_proto_file",
-            ctx.files.textproto[0].path,
-        ] + [p.path for p in ctx.files.files],
+        arguments = args,
     )
 
 index = rule(
@@ -55,7 +57,7 @@ index = rule(
     attrs = {
         "files": attr.label_list(allow_files = True, mandatory = True),
         "indexer_bin": attr.label(cfg = "host", executable = True, allow_files = True),
-        "textproto": attr.label(cfg = "host", allow_files = True),
+        "textproto": attr.label(cfg = "host", allow_files = True, mandatory = False),
         "extra_args": attr.string_list(),
     },
     outputs = {
@@ -80,13 +82,10 @@ def textproto_indexer_test(
 
     # Index protos
     proto_facts = name + "_proto_facts"
-    native.genrule(
+    index(
         name = proto_facts,
-        srcs = protos,
-        outs = [name + "_proto.facts"],
-        cmd = "$(location //kythe/cxx/indexer/proto:indexer) -o $(OUTS) " +
-              " ".join(["$(location %s)" % p for p in protos]),
-        tools = ["//kythe/cxx/indexer/proto:indexer"],
+        indexer_bin = "//kythe/cxx/indexer/proto:indexer",
+        files = protos,
     )
 
     # Run verifier
