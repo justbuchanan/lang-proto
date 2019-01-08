@@ -45,6 +45,16 @@ def _index(ctx):
     if ctx.files.textproto:
         args += ["--text_proto_file", ctx.files.textproto[0].path]
 
+
+    print("INDEX")
+    for f in ctx.files.files:
+        print(f)
+        # print(f.__attr__)
+        if hasattr(f, 'proto'):
+            print("  HAS PROTO")
+        else:
+            print("  NO PROTO")
+
     ctx.actions.run(
         outputs = [ctx.outputs.facts],
         inputs = ctx.files.files + ctx.files.textproto,
@@ -55,14 +65,12 @@ def _index(ctx):
 index = rule(
     implementation = _index,
     attrs = {
-        "files": attr.label_list(allow_files = True, mandatory = True),
+        "files": attr.label_list(allow_files = True, mandatory = True,providers = ["proto"]),
         "indexer_bin": attr.label(cfg = "host", executable = True, allow_files = True),
-        "textproto": attr.label(cfg = "host", allow_files = True, mandatory = False),
+        "textproto": attr.label(cfg = "host", allow_files = True, mandatory = False), # TODO: make it more general
         "extra_args": attr.string_list(),
     },
-    outputs = {
-        "facts": "%{name}.facts",
-    },
+    outputs = {"facts": "%{name}.facts"},
 )
 
 def textproto_indexer_test(
