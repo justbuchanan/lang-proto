@@ -13,6 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+def _verifier_test(ctx):
+    # Write script to be executed by 'bazel test'.
+    script = "cat {facts} | {verifier} {files} --show_protos --show_goals".format(
+        verifier = ctx.executable._verifier_bin.short_path,
+        facts = " ".join([f.short_path for f in ctx.files.facts]),
+        files = " ".join([f.path for f in ctx.files.files]),
+    )
+    ctx.actions.write(
+        output = ctx.outputs.executable,
+        content = script,
+    )
+
+    # To ensure the files needed by the script are available, we put them in
+    # the runfiles.
+    runfiles = ctx.runfiles(files = ctx.files.files + ctx.files.facts + [ctx.executable._verifier_bin])
+    return [DefaultInfo(runfiles = runfiles)]
+
+verifier_test = rule(
+    implementation = _verifier_test,
+    test = True,
+    attrs = {
+        "facts": attr.label_list(allow_files = True, mandatory = True),
+        "_verifier_bin": attr.label(cfg = "host", executable = True, allow_files = True, default = Label("@io_kythe//kythe/cxx/verifier")),
+        "files": attr.label_list(allow_files = True, mandatory = True),
+    },
+)
 
 def textproto_indexer_test(
         name,
@@ -36,40 +62,15 @@ def textproto_indexer_test(
     native.genrule(
         name = proto_facts,
         srcs = protos,
-        outs = [name+"_proto.facts"],
+        outs = [name + "_proto.facts"],
         cmd = "$(location //kythe/cxx/indexer/proto:indexer) -o $(OUTS) " +
               " ".join(["$(location %s)" % p for p in protos]),
         tools = ["//kythe/cxx/indexer/proto:indexer"],
     )
 
-    # Aggregate graph facts into single file to pass to verifier
-    agg_facts = name + "_agg_facts"
-    native.genrule(
-        name = agg_facts,
-        srcs = [
-            pbtxt_facts,
-            proto_facts,
-        ],
-        outs = [name + "_agg.facts"],
-        cmd = "cat $(SRCS) > $(OUTS)",
-    )
-
     # Run verifier
-    native.sh_test(
+    verifier_test(
         name = name,
-        srcs = ["verifier_wrapper.sh"],
-        args = [
-            "$(location %s)" % agg_facts,
-            " ".join(["$(location %s)" % p for p in protos]),
-            "--show_protos",
-            "--show_goals",
-            # goal regex matches both "//-" (for .proto) and "#-" (for textproto)
-            "--goal_regex=\"\s*(?:#|(?://))\-(.*)\"",
-            "$(location %s)" % textproto,
-        ],
-        data = [
-            textproto,
-            agg_facts,
-            "@io_kythe//kythe/cxx/verifier",
-        ] + protos,
+        facts = [pbtxt_facts, proto_facts],
+        files = [textproto] + protos,
     )
