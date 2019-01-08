@@ -15,7 +15,7 @@
 
 def _verifier_test(ctx):
     # Write script to be executed by 'bazel test'.
-    script = "cat {facts} | {verifier} {files} --show_protos --show_goals --goal_regex=\"\s*(?:#|//)\-(.*)\"".format(
+    script = "cat {facts} | {verifier} {files} --show_protos --show_goals --goal_regex=\"\s*(?:#|//)-(.*)\"".format(
         verifier = ctx.executable._verifier_bin.short_path,
         facts = " ".join([f.short_path for f in ctx.files.facts]),
         files = " ".join([f.path for f in ctx.files.files]),
