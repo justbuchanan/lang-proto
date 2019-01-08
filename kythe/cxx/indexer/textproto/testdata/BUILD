@@ -45,10 +45,13 @@ textproto_indexer_test(
     textproto = "with_extensions.pbtxt",
 )
 
-textproto_indexer_test(
-    name = "any_test",
-    message_name = "any_test.MyMessage",
-    protos = ["any.proto",
-"@com_google_protobuf//:any_proto",]
-    textproto = "any.pbtxt",
-)
+# textproto_indexer_test(
+#     name = "any_test",
+#     message_name = "any_test.MyMessage",
+#     protos = [
+#         "any.proto",
+#         # "@com_google_protobuf//:any_proto",
+#         "external/com_google_protobuf/src/google/protobuf/any.proto",
+#     ],
+#     textproto = "any.pbtxt",
+# )

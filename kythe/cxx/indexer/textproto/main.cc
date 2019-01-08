@@ -28,6 +28,8 @@ namespace {
 // TODO: can we get this from a library?
 // Opens the given file and returns its contents as a string.
 std::string ReadTextFile(const std::string& path) {
+
+  try {
   std::ifstream in_stream(path);
   std::string buf;
 
@@ -42,6 +44,9 @@ std::string ReadTextFile(const std::string& path) {
              std::istreambuf_iterator<char>());
 
   return buf;
+} catch(std::length_error) {
+  LOG(FATAL) << "Unable to open file: " << path;
+}
 }
 
 }  // namespace

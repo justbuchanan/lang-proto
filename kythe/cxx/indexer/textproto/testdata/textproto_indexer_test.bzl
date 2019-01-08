@@ -24,9 +24,6 @@ def _verifier_test(ctx):
         output = ctx.outputs.executable,
         content = script,
     )
-
-    # To ensure the files needed by the script are available, we put them in
-    # the runfiles.
     runfiles = ctx.runfiles(files = ctx.files.files + ctx.files.facts + [ctx.executable._verifier_bin])
     return [DefaultInfo(runfiles = runfiles)]
 
@@ -40,6 +37,32 @@ verifier_test = rule(
     },
 )
 
+def _index(ctx):
+    ctx.actions.run(
+        outputs = [ctx.outputs.facts],
+        inputs = ctx.files.files + ctx.files.textproto,
+        executable = ctx.executable.indexer_bin,
+        arguments = ctx.attr.extra_args + [
+            "-o",
+            ctx.outputs.facts.path,
+            "--text_proto_file",
+            ctx.files.textproto[0].path,
+        ] + [p.path for p in ctx.files.files],
+    )
+
+index = rule(
+    implementation = _index,
+    attrs = {
+        "files": attr.label_list(allow_files = True, mandatory = True),
+        "indexer_bin": attr.label(cfg = "host", executable = True, allow_files = True),
+        "textproto": attr.label(cfg = "host", allow_files = True),
+        "extra_args": attr.string_list(),
+    },
+    outputs = {
+        "facts": "%{name}.facts",
+    },
+)
+
 def textproto_indexer_test(
         name,
         textproto,
@@ -47,14 +70,12 @@ def textproto_indexer_test(
         message_name):
     # Index textproto
     pbtxt_facts = name + "_pbtxt_facts"
-    native.genrule(
+    index(
         name = pbtxt_facts,
-        srcs = [textproto] + protos,
-        outs = [name + "_pbtxt.facts"],
-        cmd = "$(location //kythe/cxx/indexer/textproto:indexer)" +
-              " --text_proto_file=$(location %s) -o $(OUTS) --message_name=%s " % (textproto, message_name) +
-              " ".join(["$(location %s)" % p for p in protos]),
-        tools = ["//kythe/cxx/indexer/textproto:indexer"],
+        textproto = textproto,
+        indexer_bin = "//kythe/cxx/indexer/textproto:indexer",
+        extra_args = ["--message_name=" + message_name],
+        files = protos,
     )
 
     # Index protos
