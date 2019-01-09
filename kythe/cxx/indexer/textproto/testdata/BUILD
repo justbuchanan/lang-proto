@@ -49,9 +49,9 @@ textproto_indexer_test(
     name = "any_test",
     message_name = "any_test.MyMessage",
     protos = [
+        "@com_google_protobuf//:any_proto",
         "any.proto",
-        # "@com_google_protobuf//:any_proto",
-        "@com_google_protobuf//src/google/protobuf/any.proto",
+        # "@com_google_protobuf//src/google/protobuf/any.proto",
     ],
     textproto = "any.pbtxt",
 )

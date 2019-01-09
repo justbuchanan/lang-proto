@@ -38,26 +38,40 @@ verifier_test = rule(
 )
 
 def _index(ctx):
+    x = depset()
+    print("INDEX")
+    lst = []
+    for f in ctx.attr.files:
+        # print(f)
+        # print(f.__attr__)
+        if hasattr(f, 'proto'):
+            x += f.proto.transitive_sources
+            lst += [a for a in f.proto.transitive_sources]
+            print(f.proto)
+            print("  HAS PROTO")
+            print("  PROTO: " + str(f.proto))
+            for y in f.proto.transitive_sources:
+                print(" TRANSITIVE SRC: " + str(y))
+        else:
+            # x += f.path
+            print("non-proto-lib: " + str(f))
+            print("  NO PROTO")
+            x += f.files
+            lst += f.files.to_list()
+
+    print(x)
+
     args = ctx.attr.extra_args + [
         "-o",
         ctx.outputs.facts.path,
-    ] + [p.path for p in ctx.files.files]
+    ] + [p.path for p in x]
     if ctx.files.textproto:
         args += ["--text_proto_file", ctx.files.textproto[0].path]
-
-
-    print("INDEX")
-    for f in ctx.files.files:
-        print(f)
-        # print(f.__attr__)
-        if hasattr(f, 'proto'):
-            print("  HAS PROTO")
-        else:
-            print("  NO PROTO")
+    print("X: " + str(x))
 
     ctx.actions.run(
         outputs = [ctx.outputs.facts],
-        inputs = ctx.files.files + ctx.files.textproto,
+        inputs = ctx.files.files + ctx.files.textproto + lst,
         executable = ctx.executable.indexer_bin,
         arguments = args,
     )
@@ -88,17 +102,17 @@ def textproto_indexer_test(
         files = protos,
     )
 
-    # Index protos
-    proto_facts = name + "_proto_facts"
-    index(
-        name = proto_facts,
-        indexer_bin = "//kythe/cxx/indexer/proto:indexer",
-        files = protos,
-    )
+    # # Index protos
+    # proto_facts = name + "_proto_facts"
+    # index(
+    #     name = proto_facts,
+    #     indexer_bin = "//kythe/cxx/indexer/proto:indexer",
+    #     files = protos,
+    # )
 
     # Run verifier
     verifier_test(
         name = name,
-        facts = [pbtxt_facts, proto_facts],
+        facts = [pbtxt_facts],
         files = [textproto] + protos,
     )
