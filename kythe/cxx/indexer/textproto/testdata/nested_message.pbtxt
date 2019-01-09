@@ -1,3 +1,6 @@
+# proto-file:third_party/kythe/file.prot
+# proto-message: example.MyMessage
+
 #- @msg1 ref Msg1
 msg1 {
     #- @str_field ref Msg1StrField

@@ -102,17 +102,17 @@ def textproto_indexer_test(
         files = protos,
     )
 
-    # # Index protos
-    # proto_facts = name + "_proto_facts"
-    # index(
-    #     name = proto_facts,
-    #     indexer_bin = "//kythe/cxx/indexer/proto:indexer",
-    #     files = protos,
-    # )
+    # Index protos
+    proto_facts = name + "_proto_facts"
+    index(
+        name = proto_facts,
+        indexer_bin = "//kythe/cxx/indexer/proto:indexer",
+        files = protos,
+    )
 
     # Run verifier
     verifier_test(
         name = name,
-        facts = [pbtxt_facts],
+        facts = [pbtxt_facts, proto_facts],
         files = [textproto] + protos,
     )
