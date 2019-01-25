@@ -78,28 +78,6 @@ cc_library(
 )
 
 cc_library(
-    name = "relative_paths",
-    srcs = ["relative_paths.cc"],
-    hdrs = ["relative_paths.h"],
-    deps = [
-        "@com_google_absl//absl/strings",
-        "@io_kythe//kythe/cxx/common:path_utils",
-        "@io_kythe//kythe/proto:analysis_cc_proto",
-    ],
-)
-
-cc_library(
-    name = "vname",
-    hdrs = ["vname.h"],
-    visibility = [
-        "//kythe/cxx/indexer/textproto:__pkg__",
-    ],
-    deps = [
-        "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_library(
     name = "source_tree",
     srcs = ["source_tree.cc"],
     hdrs = ["source_tree.h"],
