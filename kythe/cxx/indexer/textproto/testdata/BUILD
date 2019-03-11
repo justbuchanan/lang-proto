@@ -85,3 +85,9 @@ textproto_verifier_test(
     textproto = "schema_comments.pbtxt",
     deps = ["@com_google_protobuf//:well_known_protos"],
 )
+
+textproto_verifier_test(
+    name = "enum_value_test",
+    protos = ["example.proto"],
+    textproto = "enum_value.pbtxt",
+)

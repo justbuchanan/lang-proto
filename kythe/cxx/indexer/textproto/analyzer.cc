@@ -44,6 +44,7 @@ namespace {
 
 using ::google::protobuf::Descriptor;
 using ::google::protobuf::DescriptorPool;
+using ::google::protobuf::EnumValueDescriptor;
 using ::google::protobuf::FieldDescriptor;
 using ::google::protobuf::Message;
 using ::google::protobuf::Reflection;
@@ -270,6 +271,37 @@ Status TextprotoAnalyzer::AnalyzeField(
     if (!field_vname.ok()) return field_vname.status();
     recorder_->AddEdge(VNameRef(anchor_vname), EdgeKindID::kRef,
                        VNameRef(*field_vname));
+  }
+
+  // Link enum values back to their descriptors in the proto file(s).
+  if (field.type() == FieldDescriptor::TYPE_ENUM) {
+    const Reflection* reflection = proto.GetReflection();
+
+    const EnumValueDescriptor* enum_val =
+        field.is_repeated()
+            ? reflection->GetRepeatedEnum(proto, &field, field_index)
+            : reflection->GetEnum(proto, &field);
+
+    // string_view of rest of content starting right after the field name.
+    const int begin = line_index_.ComputeByteOffset(loc.line, loc.column);
+    absl::string_view sv = textproto_content_;
+    sv.remove_prefix(begin + field.name().size());
+
+    // TODO: this is garbage code
+    sv = StripLeadingAsciiWhitespace(sv);
+    if (!absl::ConsumePrefix(&sv, ":")) {
+      return UnknownError("Unable to find colon after field name");
+    }
+    sv = StripLeadingAsciiWhitespace(sv);
+    const int vbegin = sv.begin() - textproto_content_.begin();
+    const int vend = vbegin + enum_val->name().size();
+
+    proto::VName val_vname = CreateAndAddAnchorNode(file_vname, vbegin, vend);
+
+    auto enum_vname = VNameForDescriptor(enum_val);
+    if (!enum_vname.ok()) return enum_vname.status();
+    recorder_->AddEdge(VNameRef(val_vname), EdgeKindID::kRef,
+                       VNameRef(*enum_vname));
   }
 
   // Handle submessage.

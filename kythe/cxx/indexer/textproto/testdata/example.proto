@@ -29,4 +29,18 @@ message Message2 {
 
     //- @field5 defines/binding Field5?
     repeated bool field5 = 7;
+
+    enum MyEnum {
+        MY_DEFAULT = 0;
+        //- @VALUE1 defines/binding ENUM_VALUE1?
+        VALUE1 = 1;
+        //- @VALUE2 defines/binding ENUM_VALUE2?
+        VALUE2 = 2;
+        //- @VALUE3 defines/binding ENUM_VALUE3?
+        VALUE3 = 3;
+    }
+    //- @enum_field defines/binding EnumField?
+    MyEnum enum_field = 8;
+    //- @repeated_enum_field defines/binding RepeatedEnumField?
+    repeated MyEnum repeated_enum_field = 9;
 }

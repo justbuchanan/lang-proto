@@ -1,0 +1,14 @@
+# proto-file: example.proto
+# proto-message: example.Message2
+
+#- @enum_field ref EnumField
+#- @VALUE1 ref ENUM_VALUE1
+enum_field: VALUE1
+
+#- @repeated_enum_field ref RepeatedEnumField
+#- @VALUE2 ref ENUM_VALUE2
+repeated_enum_field: VALUE2
+
+#- @repeated_enum_field ref RepeatedEnumField
+#- @VALUE3 ref ENUM_VALUE3
+repeated_enum_field: VALUE3
