@@ -10,5 +10,21 @@ enum_field: VALUE1
 repeated_enum_field: VALUE2
 
 #- @repeated_enum_field ref RepeatedEnumField
+#- @VALUE1 ref ENUM_VALUE1
+#- @VALUE2 ref ENUM_VALUE2
+#- @VALUE3 ref ENUM_VALUE3
+repeated_enum_field: [
+    VALUE1,
+    VALUE2,
+    VALUE3
+]
+
+#- @repeated_enum_field ref RepeatedEnumField
 #- @VALUE3 ref ENUM_VALUE3
 repeated_enum_field: VALUE3
+
+#- @repeated_enum_field ref RepeatedEnumField
+#- @VALUE1 ref ENUM_VALUE1
+#- @VALUE2 ref ENUM_VALUE2
+#- @VALUE3 ref ENUM_VALUE3
+repeated_enum_field: [VALUE3, VALUE2, VALUE1]
